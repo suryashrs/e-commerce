@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WearIt Now - Seller Dashboard</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Anti-gravity specific custom styles */
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .floating-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.05), 0 0 20px rgba(255,255,255,0.6) inset;
+            border: 1px solid rgba(255, 255, 255, 1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .floating-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 50px -15px rgba(0, 0, 0, 0.08), 0 0 20px rgba(255,255,255,0.8) inset;
+        }
+        .input-gravity {
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+        .input-gravity:focus {
+            box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.2), inset 0 2px 4px 0 rgba(0, 0, 0, 0.01);
+            border-color: #94a3b8;
+            outline: none;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased text-gray-800 flex items-center justify-center py-12 px-6 bg-gradient-to-br from-gray-50 to-gray-100">
+
+    <div class="w-full max-w-4xl">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 mb-3" style="letter-spacing: -0.02em;">WearIt Now</h1>
+            <p class="text-gray-500 font-medium tracking-wide">Seller Dashboard</p>
+        </header>
+
+        <!-- Form Card -->
+        <div class="floating-card rounded-3xl p-8 md:p-12">
+            <h2 class="text-2xl font-semibold mb-8 text-gray-800 border-b pb-4 border-gray-100">Add New Product</h2>
+            
+            <form action="process_product.php" method="POST" class="space-y-8">
+                
+                <!-- Basic Info Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Name -->
+                    <div class="space-y-2">
+                        <label for="name" class="block text-sm font-semibold text-gray-700">Product Name</label>
+                        <input type="text" id="name" name="name" required class="input-gravity w-full px-4 py-3 rounded-xl" placeholder="e.g. Classic Trench Coat">
+                    </div>
+                    
+                    <!-- Price -->
+                    <div class="space-y-2">
+                        <label for="price" class="block text-sm font-semibold text-gray-700">Price (Rs)</label>
+                        <input type="number" id="price" name="price" step="0.01" required class="input-gravity w-full px-4 py-3 rounded-xl" placeholder="0.00">
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="space-y-2">
+                    <label for="description" class="block text-sm font-semibold text-gray-700">Description</label>
+                    <textarea id="description" name="description" rows="4" class="input-gravity w-full px-4 py-3 rounded-xl resize-none" placeholder="Describe the item..."></textarea>
+                </div>
+
+                <!-- Category, Sizes, Condition Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                    
+                    <!-- Category -->
+                    <div class="space-y-3">
+                        <label class="block text-sm font-semibold text-gray-700">Category</label>
+                        <div class="relative">
+                            <select name="category" required class="input-gravity w-full px-4 py-3 rounded-xl appearance-none bg-white">
+                                <option value="" disabled selected>Select Category</option>
+                                <option value="Tops">Tops</option>
+                                <option value="Bottoms">Bottoms</option>
+                                <option value="Outerwear">Outerwear</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sizes -->
+                    <div class="space-y-3">
+                        <label class="block text-sm font-semibold text-gray-700">Sizes Available</label>
+                        <div class="flex flex-wrap gap-3">
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="sizes[]" value="M" class="form-checkbox h-5 w-5 text-gray-900 rounded border-gray-300 focus:ring-gray-900 transition duration-150 ease-in-out">
+                                <span class="ml-2 text-sm text-gray-700">M</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="sizes[]" value="L" class="form-checkbox h-5 w-5 text-gray-900 rounded border-gray-300 focus:ring-gray-900 transition duration-150 ease-in-out">
+                                <span class="ml-2 text-sm text-gray-700">L</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="sizes[]" value="XL" class="form-checkbox h-5 w-5 text-gray-900 rounded border-gray-300 focus:ring-gray-900 transition duration-150 ease-in-out">
+                                <span class="ml-2 text-sm text-gray-700">XL</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="sizes[]" value="XXL" class="form-checkbox h-5 w-5 text-gray-900 rounded border-gray-300 focus:ring-gray-900 transition duration-150 ease-in-out">
+                                <span class="ml-2 text-sm text-gray-700">XXL</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="sizes[]" value="XXXL" class="form-checkbox h-5 w-5 text-gray-900 rounded border-gray-300 focus:ring-gray-900 transition duration-150 ease-in-out">
+                                <span class="ml-2 text-sm text-gray-700">XXXL</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Condition -->
+                    <div class="space-y-3">
+                        <label class="block text-sm font-semibold text-gray-700">Condition</label>
+                        <div class="space-y-2">
+                            <label class="inline-flex items-center cursor-pointer w-full hover:bg-white p-2 rounded-lg transition duration-200">
+                                <input type="radio" name="condition" value="New" required class="form-radio h-4 w-4 text-gray-900 border-gray-300 focus:ring-gray-900">
+                                <span class="ml-2 text-sm text-gray-700">New</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer w-full hover:bg-white p-2 rounded-lg transition duration-200">
+                                <input type="radio" name="condition" value="Good" required class="form-radio h-4 w-4 text-gray-900 border-gray-300 focus:ring-gray-900">
+                                <span class="ml-2 text-sm text-gray-700">Good</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer w-full hover:bg-white p-2 rounded-lg transition duration-200">
+                                <input type="radio" name="condition" value="Fair" required class="form-radio h-4 w-4 text-gray-900 border-gray-300 focus:ring-gray-900">
+                                <span class="ml-2 text-sm text-gray-700">Fair</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pinterest Image URLs -->
+                <div class="space-y-4">
+                    <label class="block text-sm font-semibold text-gray-700">Image Sources (Pinterest URLs)</label>
+                    <p class="text-xs text-gray-500 mb-2">Provide up to 5 image URLs. At least one is required.</p>
+                    <div class="space-y-3">
+                        <input type="url" name="image_urls[]" required class="input-gravity w-full px-4 py-3 rounded-xl" placeholder="1. https://pin.it/... (Required)">
+                        <input type="url" name="image_urls[]" class="input-gravity w-full px-4 py-3 rounded-xl" placeholder="2. https://pin.it/... (Optional)">
+                        <input type="url" name="image_urls[]" class="input-gravity w-full px-4 py-3 rounded-xl" placeholder="3. https://pin.it/... (Optional)">
+                        <input type="url" name="image_urls[]" class="input-gravity w-full px-4 py-3 rounded-xl" placeholder="4. https://pin.it/... (Optional)">
+                        <input type="url" name="image_urls[]" class="input-gravity w-full px-4 py-3 rounded-xl" placeholder="5. https://pin.it/... (Optional)">
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-6">
+                    <button type="submit" class="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2">
+                        Add to WearIt Now
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+</body>
+</html>
