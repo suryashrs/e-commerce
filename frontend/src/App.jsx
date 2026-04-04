@@ -1,8 +1,10 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import ProductList from "./pages/ProductList";
 import TryOn from "./pages/TryOn";
@@ -13,22 +15,27 @@ import OrderConfirmation from "./pages/OrderConfirmation";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Thrift from "./pages/Thrift";
-import Buyer from "./pages/Buyer";
 import Seller from "./pages/Seller";
 import Wishlist from "./pages/Wishlist";
 import AdminLayout from "./layouts/AdminLayout";
-import Dashboard from "./pages/admin/Dashboard";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminSellers from "./pages/admin/AdminSellers";
 import AdminProducts from "./pages/admin/AdminProducts";
 import ProductForm from "./pages/admin/ProductForm";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminLogin from "./pages/admin/AdminLogin";
+import AdminReviews from "./pages/admin/AdminReviews";
+import AdminUsers from "./pages/admin/AdminUsers";
 import Security from "./pages/Security";
-import EditProfile from "./pages/EditProfile";
+import BuyerDashboard from "./pages/BuyerDashboard";
+import BecomeSeller from "./pages/BecomeSeller";
+import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (
     <AuthProvider>
-      <WishlistProvider>
+      <CartProvider>
+        <WishlistProvider>
         <div className="min-h-screen flex flex-col">
           {/* Recursively handle layout in routes or conditionally render Navbar here. 
               For now, simple approach: The Routes decide.
@@ -39,10 +46,13 @@ function App() {
               <Routes>
                 <Route path="login" element={<AdminLogin />} />
                 <Route element={<AdminLayout />}>
-                  <Route index element={<Dashboard />} />
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="sellers" element={<AdminSellers />} />
+                  <Route path="users" element={<AdminUsers />} />
                   <Route path="products" element={<AdminProducts />} />
                   <Route path="products/new" element={<ProductForm />} />
                   <Route path="products/edit/:id" element={<ProductForm />} />
+                  <Route path="reviews" element={<AdminReviews />} />
                   <Route path="orders" element={<AdminOrders />} />
                 </Route>
               </Routes>
@@ -62,30 +72,24 @@ function App() {
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/order-confirmation" element={<OrderConfirmation />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/thrift" element={<Thrift />} />
-                    <Route path="/buyer" element={<Buyer />} />
+                    <Route path="/buyer" element={<BuyerDashboard />} />
                     <Route path="/seller" element={<Seller />} />
                     <Route path="/wishlist" element={<Wishlist />} />
-                    <Route path="/profile/edit" element={<EditProfile />} />
+                    <Route path="/profile/edit" element={<BuyerDashboard />} />
+                    <Route path="/become-seller" element={<BecomeSeller />} />
                     <Route path="/security" element={<Security />} />
                   </Routes>
                 </main>
-                <footer className="bg-gradient-to-r from-gray-900 to-gray-800 py-8 text-center text-white">
-                  <div className="container mx-auto px-4">
-                    <p className="text-lg font-semibold mb-2">
-                      WearItNow - Wear Your Confidence
-                    </p>
-                    <p className="text-gray-300">
-                      &copy; 2025 WearItNow. All rights reserved.
-                    </p>
-                  </div>
-                </footer>
+                <Footer />
               </>
             } />
           </Routes>
         </div>
-      </WishlistProvider>
+        </WishlistProvider>
+      </CartProvider>
     </AuthProvider>
   );
 }

@@ -1,20 +1,77 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { API_BASE_URL } from "../config";
+import { 
+  User, 
+  Settings, 
+  LogOut, 
+  ShoppingBag, 
+  Heart, 
+  Search,
+  LayoutDashboard,
+  Store,
+  ShieldCheck,
+  Repeat,
+  Bell,
+  Menu,
+  X
+} from "lucide-react";
 
 const Navbar = () => {
   const { getCartCount } = useCart();
-  const { user, logout } = useAuth();
+  const { user, viewMode, toggleViewMode, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
   const cartCount = getCartCount();
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 30000);
+      const handleSync = () => fetchNotifications();
+      window.addEventListener('notificationsUpdated', handleSync);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('notificationsUpdated', handleSync);
+      };
+    }
+  }, [user]);
+
+  // Close menus on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setShowUserMenu(false);
+    setShowNotifications(false);
+    setShowMobileSearch(false);
+  }, [location.pathname]);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/notifications/user_notifications.php?user_id=${user.id}`);
+      const data = await res.json();
+      if (data.status === 200) {
+          setNotifications(data.body || []);
+          setUnreadCount(data.unread_count || 0);
+      }
+    } catch(err) {
+      console.error(err);
+    }
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/shop?search=${encodeURIComponent(searchQuery)}`);
+      setShowMobileSearch(false);
     }
   };
 
@@ -24,246 +81,263 @@ const Navbar = () => {
     navigate("/");
   };
 
-  return (
-    <nav className="bg-gradient-to-r from-black via-gray-800 to-gray-700 shadow-lg">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex justify-between items-center mb-4">
-          <Link
-            to="/"
-            className="text-2xl font-bold text-white hover:text-gray-100 transition"
-          >
-            ✨ WearItNow
-          </Link>
+  const handleNotificationClick = async (notifId, isRead) => {
+    setShowNotifications(false);
+    if (!isRead) {
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      try {
+        await fetch(`${API_BASE_URL}/notifications/mark_read.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notification_id: notifId })
+        });
+      } catch(e) {
+        console.error("Failed to mark notification as read", e);
+      }
+    }
+  };
 
-          <form onSubmit={handleSearch} className="flex-1 max-w-md mx-8">
-            <div className="relative">
+  return (
+    <nav className="bg-gradient-to-r from-black via-gray-900 to-gray-800 shadow-xl sticky top-0 z-50">
+      <div className="container mx-auto px-4">
+        {/* Main Header Row */}
+        <div className="flex justify-between items-center h-20">
+          
+          {/* Logo & Mobile Menu Toggle */}
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden text-white hover:text-gray-300 transition"
+            >
+              {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+            </button>
+            <Link
+              to="/"
+              className="text-2xl font-black text-white hover:text-gray-200 transition tracking-tighter italic flex items-center gap-2"
+            >
+              ✨ <span className="hidden sm:inline">WearItNow</span>
+              <span className="sm:hidden text-lg">WIN</span>
+            </Link>
+          </div>
+
+          {/* Desktop Search Bar */}
+          <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-md mx-8">
+            <div className="relative w-full">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products..."
-                className="w-full px-4 py-2 bg-white border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-white shadow-md"
+                placeholder="Search premium collections..."
+                className="w-full px-5 py-2.5 bg-white/10 text-white placeholder-gray-400 border border-white/20 rounded-full focus:outline-none focus:ring-2 focus:ring-white/50 shadow-md backdrop-blur-md transition-all text-sm"
               />
-              <button
-                type="submit"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-black hover:text-gray-700"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
+              <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition">
+                <Search size={18} />
               </button>
             </div>
           </form>
 
-          <div className="flex items-center space-x-4">
-            <Link
-              to="/buyer"
-              className="text-white hover:text-gray-100 transition font-medium"
+          {/* Actions Area */}
+          <div className="flex items-center space-x-3 sm:space-x-5 lg:space-x-6">
+            
+            {/* Mobile Search Toggle */}
+            <button 
+              onClick={() => setShowMobileSearch(!showMobileSearch)}
+              className="lg:hidden text-white/80 hover:text-white transition"
             >
-              👤 Buyer
-            </Link>
-            <Link
-              to="/seller"
-              className="text-white hover:text-gray-100 transition font-medium"
-            >
-              🏪 Seller
-            </Link>
-            <Link
-              to="/wishlist"
-              className="text-white hover:text-gray-100 relative"
-              title="Wishlist"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                />
-              </svg>
-            </Link>
-            <Link
-              to="/cart"
-              className="text-white hover:text-gray-100 relative"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                />
-              </svg>
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
+              <Search size={22} />
+            </button>
 
-            {user ? (
-              <div className="relative group">
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center space-x-2 focus:outline-none"
-                >
-                  <div className="relative">
-                    {user.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt={user.name}
-                        className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold border-2 border-white shadow-sm">
-                        {user.name.charAt(0).toUpperCase()}
-                      </div>
+            {/* Role Specific Quick Links (Desktop) */}
+            {user && viewMode === 'seller' && (
+              <Link to="/seller" className="hidden md:flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg text-xs uppercase tracking-widest">
+                <Store size={14} /> Portal
+              </Link>
+            )}
+            {/* Utility Icons (Shared Mobile/Desktop) */}
+            <div className="flex items-center gap-4 sm:gap-5">
+              <Link to="/wishlist" className="text-white/80 hover:text-white transition relative hidden sm:flex">
+                <Heart size={22} />
+              </Link>
+              
+              <Link to="/cart" className="text-white/80 hover:text-white transition relative flex items-center">
+                <ShoppingBag size={22} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-white text-black text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-black shadow-lg">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+
+              {user && (
+                <div className="relative">
+                  <button onClick={() => setShowNotifications(!showNotifications)} className="text-white/80 hover:text-white transition relative">
+                    <Bell size={22} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] rounded-full h-4 w-4 flex items-center justify-center font-black">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
                     )}
-                    <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white bg-green-400"></span>
+                  </button>
+                  {/* Notifications Dropdown (Shared logic from existing but positioned better) */}
+                  {showNotifications && (
+                    <div className="absolute right-[-80px] sm:right-0 mt-6 w-72 sm:w-80 bg-white rounded-3xl shadow-2xl py-2 z-50 border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                       {/* ... Existing Notification Content ... */}
+                       <div className="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                        <h3 className="font-black text-gray-900 text-xs uppercase tracking-widest">Activity</h3>
+                        {unreadCount > 0 && (
+                          <button onClick={() => {}} className="text-[9px] font-black text-indigo-600 uppercase">Mark All</button>
+                        )}
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {notifications.length > 0 ? (
+                          notifications.slice(0, 5).map(notif => (
+                            <Link key={notif.id} to={viewMode === 'seller' ? '/seller' : '/buyer'} className="block px-6 py-4 border-b border-gray-50 hover:bg-gray-50 transition">
+                              <p className="text-[10px] font-black text-indigo-600 uppercase mb-1">{notif.type}</p>
+                              <p className="text-xs text-gray-600 line-clamp-2">{notif.message}</p>
+                            </Link>
+                          ))
+                        ) : (
+                          <div className="py-8 text-center text-gray-400 text-xs">No notifications</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Profile / Sign In */}
+            {user ? (
+              <div className="relative">
+                <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center group">
+                  <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full border-2 border-white/30 group-hover:border-white transition overflow-hidden">
+                    <div className="h-full w-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
                   </div>
                 </button>
-
-                {/* Dropdown Menu */}
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-2xl py-2 z-50 transform transition-all duration-200 ease-out origin-top-right border border-gray-100">
-                    {/* Header */}
-                    <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 rounded-t-xl">
-                      <div className="flex items-center space-x-3">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-                          {user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-gray-800">
-                            {user.name}
-                          </p>
-                          <div className="flex items-center space-x-1">
-                            <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                            <p className="text-xs text-green-600 font-medium">Online</p>
-                          </div>
-                        </div>
-                      </div>
+                  <div className="absolute right-0 mt-4 w-56 bg-white rounded-3xl shadow-2xl py-3 z-50 border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="px-5 py-3 border-b border-gray-50 mb-2">
+                       <p className="text-sm font-black text-gray-900 truncate">{user.name}</p>
+                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{viewMode} Mode</p>
                     </div>
-
-                    {/* Menu Items */}
-                    <div className="py-2">
-                      <Link
-                        to="/profile/edit"
-                        className="flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-purple-600 transition-colors"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        Edit Profile
-                      </Link>
-                      <Link
-                        to="/account"
-                        className="flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-purple-600 transition-colors"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Account Settings
-                      </Link>
-                      <Link
-                        to="/security"
-                        className="flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-purple-600 transition-colors"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        Password / Security
-                      </Link>
-                      <Link
-                        to="/notifications"
-                        className="flex items-center px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-purple-600 transition-colors"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                        </svg>
-                        Notifications
-                      </Link>
-                    </div>
-
-                    <div className="border-t border-gray-100 my-1"></div>
-
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-6 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      Sign Out
+                    <Link to={viewMode === 'seller' ? "/seller?tab=profile" : "/profile/edit"} className="flex items-center px-5 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-50">
+                      <User size={14} className="mr-3 opacity-60" /> {viewMode === 'seller' ? 'Merchant Profile' : 'Profile Settings'}
+                    </Link>
+                    {(user.role === 'seller' || user.role === 'admin') && (
+                      <button onClick={toggleViewMode} className="w-full flex items-center px-5 py-2.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50 transition">
+                        <Repeat size={14} className="mr-3" /> Switch to {viewMode === 'buyer' ? 'Seller' : 'Buyer'}
+                      </button>
+                    )}
+                    <button onClick={handleLogout} className="w-full flex items-center px-5 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 border-t border-gray-50 mt-2">
+                      <LogOut size={14} className="mr-3" /> Sign Out
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <Link
-                to="/login"
-                className="bg-white text-black px-4 py-2 rounded-full font-bold hover:bg-gray-100 transition shadow-md"
-              >
+              <Link to="/login" className="bg-white text-black px-5 py-2 sm:px-6 sm:py-2.5 rounded-full font-bold hover:bg-gray-100 transition shadow-lg text-xs sm:text-sm whitespace-nowrap">
                 Sign In
               </Link>
             )}
           </div>
         </div>
 
-        <div className="flex justify-center space-x-8">
-          <Link
-            to="/"
-            className="text-white hover:text-gray-100 transition font-medium"
-          >
-            Home
-          </Link>
-          <Link
-            to="/shop"
-            className="text-white hover:text-gray-100 transition font-medium"
-          >
-            Shop
-          </Link>
-          <Link
-            to="/thrift"
-            className="text-white hover:text-gray-100 transition font-medium"
-          >
-            ♻️ Thrift Shop
-          </Link>
-          <Link
-            to="/try-on"
-            className="text-white hover:text-gray-100 transition font-medium"
-          >
-            🎨 Virtual Try-On
-          </Link>
+        {/* Mobile Search Overlay */}
+        {showMobileSearch && (
+          <form onSubmit={handleSearch} className="lg:hidden pb-4 animate-in slide-in-from-top-2 duration-200">
+            <div className="relative">
+              <input
+                type="text"
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="w-full px-5 py-3 bg-white/10 text-white border border-white/20 rounded-2xl focus:outline-none backdrop-blur-md"
+              />
+              <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 text-white">
+                <Search size={20} />
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Desktop Bottom Links (Hidden on Mobile, moved to Sidebar) */}
+        <div className="hidden lg:flex justify-center space-x-12 pb-4">
+          {['Home', 'Shop', 'Thrift', 'Try-On'].map((item) => (
+            <Link
+              key={item}
+              to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
+              className={`text-white/70 hover:text-white transition text-[11px] font-black uppercase tracking-[0.25em] relative group py-2 ${location.pathname === (item === 'Home' ? '/' : `/${item.toLowerCase()}`) ? 'text-white' : ''}`}
+            >
+              {item}
+              <span className={`absolute bottom-0 left-0 h-0.5 bg-white transition-all ${location.pathname === (item === 'Home' ? '/' : `/${item.toLowerCase()}`) ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+            </Link>
+          ))}
         </div>
       </div>
+
+      {/* Mobile Drawer Navigation */}
+      {isMobileMenuOpen && (
+        <>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+          <div className="fixed top-0 left-0 bottom-0 w-3/4 max-w-[300px] bg-white z-50 p-8 shadow-2xl lg:hidden animate-in slide-in-from-left duration-300">
+            <div className="flex justify-between items-center mb-10">
+              <span className="text-xl font-black italic">Menu</span>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="text-gray-400 hover:text-black">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {[
+                { name: 'Home', path: '/' },
+                { name: 'Collections', path: '/shop' },
+                { name: 'Thrift Shop', path: '/thrift' },
+                { name: 'Virtual Try-On', path: '/try-on' },
+                { name: 'My Wishlist', path: '/wishlist' }
+              ].map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className="block text-lg font-bold text-gray-800 hover:text-black transition flex items-center justify-between group"
+                >
+                  {item.name}
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                </Link>
+              ))}
+            </div>
+
+            {user && (
+              <div className="mt-12 pt-8 border-t border-gray-100">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">User Actions</p>
+                <div className="space-y-4">
+                   {user.role !== 'buyer' && (
+                     <div className="space-y-4">
+                        {viewMode === 'seller' && (
+                          <Link to="/seller" className="w-full text-left font-bold text-indigo-600 flex items-center gap-3">
+                            <LayoutDashboard size={18} /> Merchant Dashboard
+                          </Link>
+                        )}
+                        <button onClick={toggleViewMode} className="w-full text-left font-bold text-gray-600 flex items-center gap-3">
+                            <Repeat size={18} /> Switch to {viewMode === 'buyer' ? 'Seller' : 'Buyer'}
+                        </button>
+                     </div>
+                   )}
+                   <Link to={viewMode === 'seller' ? "/seller?tab=profile" : "/profile/edit"} className="flex items-center gap-3 font-bold text-gray-600">
+                      <User size={18} /> {viewMode === 'seller' ? 'Merchant Profile' : 'My Profile'}
+                   </Link>
+                   <button onClick={handleLogout} className="flex items-center gap-3 font-bold text-rose-600">
+                      <LogOut size={18} /> Sign Out
+                   </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </nav>
   );
 };

@@ -42,7 +42,7 @@ const Wishlist = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {wishlistItems.map((product) => (
+                    {wishlistItems.filter(p => !p.is_flagged).map((product) => (
                         <div
                             key={product.id}
                             className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-transparent hover:border-black transition-all duration-300 group"

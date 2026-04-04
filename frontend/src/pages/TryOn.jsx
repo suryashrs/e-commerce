@@ -11,7 +11,7 @@ const TryOn = () => {
   const [productScale, setProductScale] = useState(0.35);
   const [productPositionY, setProductPositionY] = useState(0.3);
   const [productPositionX, setProductPositionX] = useState(0.5);
-  const [opacity, setOpacity] = useState(0.85);
+  const [opacity, setOpacity] = useState(0.95);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -19,11 +19,7 @@ const TryOn = () => {
     const loadProducts = async () => {
       try {
         const data = await fetchProducts();
-        const filteredData = data.filter(p => {
-          const cat = p.category?.toLowerCase() || '';
-          const name = p.name?.toLowerCase() || '';
-          return cat.includes('jacket') || cat.includes('pant') || name.includes('jacket') || name.includes('pant');
-        });
+        const filteredData = data.filter(p => p.has_tryon == 1 || p.has_tryon === true);
         setProducts(filteredData);
       } catch (error) {
         console.error("Failed to load products", error);
@@ -47,6 +43,7 @@ const TryOn = () => {
         img.onload = () => {
           setUserImage(img);
           if (selectedProduct) {
+            const tryOnUrl = selectedProduct.try_on_image_url && selectedProduct.try_on_image_url.trim() !== "" ? selectedProduct.try_on_image_url : selectedProduct.image_url;
             drawCanvas(img, selectedProduct);
           }
         };
@@ -79,7 +76,9 @@ const TryOn = () => {
     ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
     // Draw product overlay if selected
-    if (product && product.image_url) {
+    const tryOnUrl = product.try_on_image_url && product.try_on_image_url.trim() !== "" ? product.try_on_image_url : product.image_url;
+
+    if (product && tryOnUrl) {
       const productImg = new Image();
       productImg.crossOrigin = "Anonymous";
       productImg.onload = () => {
@@ -93,8 +92,12 @@ const TryOn = () => {
 
         ctx.drawImage(productImg, x, y, pWidth, pHeight);
         ctx.globalAlpha = 1.0;
+        console.log("Product overlay drawn successfully in Studio:", tryOnUrl);
       };
-      productImg.src = product.image_url;
+      productImg.onerror = (e) => {
+        console.error("Failed to load product overlay image in Studio:", tryOnUrl, e);
+      };
+      productImg.src = tryOnUrl;
     }
   };
 
@@ -112,17 +115,17 @@ const TryOn = () => {
     setProductScale(0.35);
     setProductPositionY(0.3);
     setProductPositionX(0.5);
-    setOpacity(0.85);
+    setOpacity(0.95);
   };
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="text-center mb-8">
-        <h1 className="text-5xl font-bold text-black mb-4">
-          🎨 Virtual Try-On Studio
+      <div className="text-center mb-8 px-4">
+        <h1 className="text-3xl sm:text-5xl font-black text-black mb-4 tracking-tighter italic">
+          ✨ Try-On Studio
         </h1>
-        <p className="text-gray-600 text-lg">
-          Upload your photo and see how our products look on you!
+        <p className="text-gray-600 text-sm sm:text-lg font-medium max-w-xl mx-auto">
+          Upload your photo and see how our premium collections look on you!
         </p>
       </div>
 
@@ -131,13 +134,13 @@ const TryOn = () => {
         <div className="w-full lg:w-1/3 space-y-6">
           {/* Mode Selection */}
           <div className="bg-white p-2 rounded-2xl shadow-lg border-2 border-gray-300 flex">
-            <button 
+            <button
               onClick={() => setMode("photo")}
               className={`flex-1 py-3 rounded-xl font-bold transition flex justify-center items-center gap-2 shadow-sm ${mode === "photo" ? "bg-black text-white" : "bg-transparent text-gray-500 hover:text-black"}`}
             >
               📸 Photo
             </button>
-            <button 
+            <button
               onClick={() => setMode("ar")}
               className={`flex-1 py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-sm ${mode === "ar" ? "bg-purple-600 text-white" : "bg-transparent text-gray-500 hover:text-purple-600"}`}
             >
@@ -147,30 +150,30 @@ const TryOn = () => {
 
           {/* Upload Photo (Only in Photo Mode) */}
           {mode === "photo" && (
-          <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-300">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <span className="bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">
-                1
-              </span>
-              Upload Your Photo
-            </h2>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full bg-black text-white py-3 px-4 rounded-xl font-semibold hover:bg-gray-800 transition shadow-md"
-            >
-              {userImage ? "📸 Change Photo" : "📸 Upload Photo"}
-            </button>
-            <p className="text-xs text-gray-500 mt-2">
-              Best results with full-body photos
-            </p>
-          </div>
+            <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-300">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <span className="bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">
+                  1
+                </span>
+                Upload Your Photo
+              </h2>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full bg-black text-white py-3 px-4 rounded-xl font-semibold hover:bg-gray-800 transition shadow-md"
+              >
+                {userImage ? "📸 Change Photo" : "📸 Upload Photo"}
+              </button>
+              <p className="text-xs text-gray-500 mt-2">
+                Best results with full-body photos
+              </p>
+            </div>
           )}
 
           {/* Select Product */}
@@ -181,23 +184,23 @@ const TryOn = () => {
               </span>
               Select Product
             </h2>
-            <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto custom-scrollbar">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-2 gap-3 max-h-96 overflow-y-auto custom-scrollbar p-1">
               {products.map((p) => (
                 <div
                   key={p.id}
                   onClick={() => handleProductSelect(p)}
                   className={`cursor-pointer border-2 rounded-xl p-2 transition-all transform hover:scale-105 ${selectedProduct?.id === p.id
-                    ? "border-black ring-4 ring-gray-300 shadow-lg"
-                    : "border-gray-200 hover:border-gray-400"
+                    ? "border-black ring-2 ring-gray-100 shadow-lg"
+                    : "border-gray-100 hover:border-gray-400"
                     }`}
                 >
                   <img
                     src={p.image_url}
                     alt={p.name}
-                    className="w-full h-28 object-cover rounded-lg mb-2"
+                    className="w-full h-20 sm:h-24 lg:h-28 object-cover rounded-lg mb-2"
                   />
-                  <p className="text-xs font-semibold truncate">{p.name}</p>
-                  <p className="text-xs text-gray-700 font-bold">
+                  <p className="text-[10px] font-bold truncate">{p.name}</p>
+                  <p className="text-[10px] text-gray-900 font-black">
                     Rs {p.price}
                   </p>
                 </div>
@@ -296,7 +299,7 @@ const TryOn = () => {
         {/* Right Panel - Preview */}
         <div className="w-full lg:w-2/3">
           {mode === "ar" ? (
-             <ArCamera selectedProduct={selectedProduct} />
+            <ArCamera selectedProduct={selectedProduct} />
           ) : (
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-300 min-h-[600px] flex flex-col">
               <div className="flex-grow flex items-center justify-center">

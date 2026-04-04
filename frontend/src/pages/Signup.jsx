@@ -12,6 +12,12 @@ const Signup = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [role, setRole] = useState("buyer");
 
+    // Shop details for sellers
+    const [shopName, setShopName] = useState("");
+    const [shopNumber, setShopNumber] = useState("");
+    const [shopAddress, setShopAddress] = useState("");
+    const [shopPhone, setShopPhone] = useState("");
+
     // Step 2 – OTP
     const [step, setStep] = useState("details"); // "details" | "otp"
     const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
@@ -47,6 +53,13 @@ const Signup = () => {
         if (password !== confirmPassword) {
             setError("Passwords do not match.");
             return;
+        }
+
+        if (role === "seller") {
+            if (!shopName || !shopNumber || !shopAddress || !shopPhone) {
+                setError("Please fill in all shop details.");
+                return;
+            }
         }
 
         setIsLoading(true);
@@ -102,7 +115,12 @@ const Signup = () => {
             return;
         }
         setIsLoading(true);
-        const result = await verifyOtp(name, email, password, role, otp);
+        const result = await verifyOtp(name, email, password, role, otp, {
+            shop_name: shopName,
+            shop_number: shopNumber,
+            shop_address: shopAddress,
+            shop_phone: shopPhone
+        });
         setIsLoading(false);
 
         if (result.success) {
@@ -208,16 +226,50 @@ const Signup = () => {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">I want to be a</label>
                                     <div className="flex space-x-4">
-                                        <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50 flex-1">
+                                        <label className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all flex-1 ${role === 'buyer' ? 'border-black bg-gray-50' : 'hover:bg-gray-50'}`}>
                                             <input type="radio" name="role" value="buyer" checked={role === 'buyer'} onChange={(e) => setRole(e.target.value)} className="h-4 w-4 text-black focus:ring-black border-gray-300" />
                                             <span className="ml-2 font-medium">Buyer</span>
                                         </label>
-                                        <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50 flex-1">
+                                        <label className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all flex-1 ${role === 'seller' ? 'border-black bg-gray-50' : 'hover:bg-gray-50'}`}>
                                             <input type="radio" name="role" value="seller" checked={role === 'seller'} onChange={(e) => setRole(e.target.value)} className="h-4 w-4 text-black focus:ring-black border-gray-300" />
                                             <span className="ml-2 font-medium">Seller</span>
                                         </label>
                                     </div>
                                 </div>
+
+                                {role === 'seller' && (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="pt-2 border-t border-gray-100 mt-2">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Shop Details</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-700 mb-1">Shop Name</label>
+                                                <input type="text" value={shopName} onChange={(e) => setShopName(e.target.value)}
+                                                    className="w-full px-4 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition duration-200 outline-none"
+                                                    placeholder="Store Name" required={role === 'seller'} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-700 mb-1">Shop Number</label>
+                                                <input type="text" value={shopNumber} onChange={(e) => setShopNumber(e.target.value)}
+                                                    className="w-full px-4 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition duration-200 outline-none"
+                                                    placeholder="REG-00000" required={role === 'seller'} />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-700 mb-1">Shop Address</label>
+                                            <input type="text" value={shopAddress} onChange={(e) => setShopAddress(e.target.value)}
+                                                className="w-full px-4 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition duration-200 outline-none"
+                                                placeholder="Street, City" required={role === 'seller'} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-700 mb-1">Shop Phone</label>
+                                            <input type="tel" value={shopPhone} onChange={(e) => setShopPhone(e.target.value)}
+                                                className="w-full px-4 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition duration-200 outline-none"
+                                                placeholder="+1..." required={role === 'seller'} />
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="flex items-center mb-4">
                                     <input id="terms" type="checkbox" className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded" required />
                                     <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">

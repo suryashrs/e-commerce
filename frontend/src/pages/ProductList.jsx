@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchProducts } from "../services/api";
 import { useWishlist } from "../context/WishlistContext";
+import { Heart } from "lucide-react";
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
@@ -50,7 +51,7 @@ const ProductList = () => {
     // Wait, let's keep it simple: category is handled by URL param or we introduce a local category state.
     // The user screenshot shows "Category" dropdown. Let's filter by categoryParam if exists.
     if (categoryParam) {
-      filtered = filtered.filter((p) => p.category === categoryParam);
+      filtered = filtered.filter((p) => p.category.toLowerCase() === categoryParam.toLowerCase());
     }
 
     // Search filter
@@ -171,13 +172,13 @@ const ProductList = () => {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-sm appearance-none"
                   >
                       <option value="">All Categories</option>
-                      <option value="tops">Tops</option>
-                      <option value="bottoms">Bottoms</option>
-                      <option value="outerwear">Outerwear</option>
-                      <option value="dresses">Dresses</option>
-                      <option value="accessories">Accessories</option>
-                      <option value="footwear">Footwear</option>
-                      <option value="thrift">Thrift ♻️</option>
+                      <option value="Tops">Tops</option>
+                      <option value="Bottoms">Bottoms</option>
+                      <option value="Outerwear">Outerwear</option>
+                      <option value="Dresses">Dresses</option>
+                      <option value="Best Selling">Best Selling</option>
+                      <option value="Footwear">Footwear</option>
+                      <option value="Thrift">Thrift ♻️</option>
                   </select>
               </div>
 
@@ -231,25 +232,25 @@ const ProductList = () => {
       </div>
 
       <div className="w-full">
-        {/* Products Grid - Full Width Now */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Products Grid - Fluid Responsive */}
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {filteredProducts.map((product) => (
               <div key={product.id} className="group relative">
                 <Link
                   to={`/product/${product.id}`}
-                  className="block"
+                  className="block h-full"
                 >
-                  <div className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-transparent hover:border-black hover:shadow-2xl transition-all duration-300">
-                    <div className="aspect-square overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 relative">
+                  <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm sm:shadow-lg overflow-hidden border border-gray-100 hover:border-black transition-all duration-500 h-full flex flex-col">
+                    <div className="aspect-[4/5] sm:aspect-square overflow-hidden bg-gray-50 relative">
                       <img
                         src={product.image_url}
                         alt={product.name}
-                        className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${product.stock <= 0 ? 'opacity-50 grayscale-[0.5]' : ''}`}
+                        className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${product.stock <= 0 ? 'opacity-50 grayscale' : ''}`}
                       />
                       {product.stock <= 0 && (
-                        <div className="absolute inset-0 flex items-center justify-center z-10">
-                          <span className="bg-black/80 text-white px-4 py-2 rounded-full text-sm font-bold uppercase tracking-widest shadow-2xl">
-                            Out of Stock
+                        <div className="absolute inset-0 flex items-center justify-center z-10 p-2">
+                          <span className="bg-black/90 text-white px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter">
+                            Sold Out
                           </span>
                         </div>
                       )}
@@ -258,39 +259,24 @@ const ProductList = () => {
                           e.preventDefault();
                           toggleWishlist(product);
                         }}
-                        className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-lg hover:scale-110 transition-transform z-10"
-                        title={isInWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+                        className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-white/80 backdrop-blur-md rounded-full p-2 shadow-md hover:scale-110 transition z-10"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill={isInWishlist(product.id) ? "currentColor" : "none"}
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                          style={{ color: isInWishlist(product.id) ? "#ef4444" : "#000" }}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                          />
-                        </svg>
+                        <Heart size={16} fill={isInWishlist(product.id) ? "currentColor" : "none"} className={isInWishlist(product.id) ? "text-rose-500" : "text-black"} />
                       </button>
                     </div>
-                    <div className="p-5">
-                      <h3 className="text-lg font-bold mb-1 text-gray-800">
-                        {product.name}
-                      </h3>
-                      <p className="text-gray-600 text-sm mb-3 font-medium">
+                    <div className="p-3 sm:p-5 flex-grow flex flex-col">
+                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
                         {product.category}
                       </p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-2xl font-bold text-black">
+                      <h3 className="text-xs sm:text-lg font-bold text-gray-900 line-clamp-1 mb-2">
+                        {product.name}
+                      </h3>
+                      <div className="mt-auto flex justify-between items-end">
+                        <span className="text-sm sm:text-2xl font-black text-black">
                           Rs {product.price}
                         </span>
-                        <span className="text-gray-600 text-sm font-semibold group-hover:underline">
-                          View Details &rarr;
+                        <span className="hidden sm:block text-gray-400 text-xs font-black uppercase tracking-widest group-hover:text-black transition">
+                          View →
                         </span>
                       </div>
                     </div>

@@ -4,13 +4,14 @@ import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useAuth } from "../context/AuthContext";
 import AuthGuardModal from "../components/AuthGuardModal";
+import ReviewSection from "../components/ReviewSection";
 import { fetchProduct } from "../services/api";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const { addToCart, cartError, clearCartError, cartSuccess, clearCartSuccess } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
-  const { user } = useAuth();
+  const { user, viewMode } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -34,6 +35,7 @@ const ProductDetail = () => {
         setProduct(data);
       } catch (error) {
         console.error("Failed to load product", error);
+        setProduct({ error: true, message: error.response?.data?.message || "Product not found or unavailable." });
       } finally {
         setLoading(false);
       }
@@ -82,7 +84,9 @@ const ProductDetail = () => {
     ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
     // Draw product overlay
-    if (product && product.image_url) {
+    const tryOnUrl = product.try_on_image_url && product.try_on_image_url.trim() !== "" ? product.try_on_image_url : product.image_url;
+    
+    if (product && tryOnUrl) {
       const productImg = new Image();
       productImg.crossOrigin = "Anonymous";
       productImg.onload = () => {
@@ -94,8 +98,14 @@ const ProductDetail = () => {
 
         ctx.drawImage(productImg, x, y, pWidth, pHeight);
         ctx.globalAlpha = 1.0;
+        console.log("Product overlay drawn successfully:", tryOnUrl);
       };
-      productImg.src = product.image_url;
+      
+      productImg.onerror = (e) => {
+        console.error("Failed to load product overlay image:", tryOnUrl, e);
+      };
+      
+      productImg.src = tryOnUrl;
     }
   };
 
@@ -107,6 +117,9 @@ const ProductDetail = () => {
     const success = addToCart(product, quantity, selectedSize);
     if (success) {
       setShowSuccess(true);
+    } else {
+      // If failed, we scroll to the error message (which stays in CartContext state)
+      window.scrollTo({ top: 100, behavior: 'smooth' });
     }
   };
 
@@ -136,7 +149,27 @@ const ProductDetail = () => {
     }
   };
 
-  if (!product) return <div className="text-center py-10">Loading...</div>;
+  if (loading) return <div className="text-center py-20 animate-pulse text-gray-400 font-black uppercase tracking-widest">Initialising System...</div>;
+
+  if (!product || product.error) {
+    return (
+      <div className="text-center py-32 bg-white rounded-[3rem] shadow-sm border border-gray-100 max-w-4xl mx-auto mt-20">
+        <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-8 animate-bounce">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h2 className="text-3xl font-black text-gray-900 mb-4 tracking-tighter">Product Unavailable</h2>
+        <p className="text-gray-500 font-bold mb-10 max-w-md mx-auto">{product?.message || "This item has been flagged for a violation or is no longer part of our global inventory."}</p>
+        <Link 
+          to="/shop" 
+          className="bg-black text-white px-12 py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:scale-105 transition active:scale-95"
+        >
+          Return to Global Store
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -304,14 +337,14 @@ const ProductDetail = () => {
           <div className="flex gap-4">
             <button
               onClick={handleAddToCart}
-              disabled={product.stock <= 0}
+              disabled={product.stock <= 0 || (viewMode === 'seller' || viewMode === 'admin')}
               className={`flex-1 px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg ${
-                product.stock > 0 
+                product.stock > 0 && !(viewMode === 'seller' || viewMode === 'admin')
                   ? "bg-black text-white hover:bg-gray-800" 
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-gray-300 text-gray-400 cursor-not-allowed"
               }`}
             >
-              {product.stock > 0 ? "🛒 Add to Cart" : "🚫 Out of Stock"}
+              {(viewMode === 'seller' || viewMode === 'admin') ? "🚫 Purchase disabled for Merchant" : (product.stock > 0 ? "🛒 Add to Cart" : "🚫 Out of Stock")}
             </button>
             <button
               onClick={handleWishlistToggle}
@@ -338,113 +371,138 @@ const ProductDetail = () => {
         </div>
 
         {/* Virtual Try-On */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-300">
-          <h2 className="text-3xl font-bold mb-6 text-black flex items-center gap-2">
-            🎨 Virtual Try-On
-          </h2>
+        {product.has_tryon === 1 ? (
+          <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-300">
+            <h2 className="text-3xl font-bold mb-6 text-black flex items-center gap-2">
+              🎨 Virtual Try-On
+            </h2>
 
-          {!showTryOn ? (
-            <div className="text-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-12">
-              <div className="text-6xl mb-6">👗</div>
-              <p className="text-gray-600 mb-6 text-lg font-medium">
-                Upload your photo to see how this item looks on you!
-              </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-black text-white px-8 py-4 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg"
-              >
-                📸 Upload Photo
-              </button>
-            </div>
-          ) : (
-            <div>
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 mb-4">
-                <canvas
-                  ref={canvasRef}
-                  className="max-w-full rounded-xl shadow-lg mx-auto"
-                />
-              </div>
-
-              {/* Controls */}
-              <div className="space-y-4 mb-4 bg-gray-50 p-4 rounded-xl">
-                <div>
-                  <label className="block text-sm font-bold mb-2 text-gray-700">
-                    Size: {Math.round(productScale * 100)}%
-                  </label>
+            {!showTryOn ? (
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 text-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-8 border border-gray-200">
+                  <div className="text-5xl mb-4">📸</div>
+                  <p className="text-gray-600 mb-4 font-medium">Try it on with your photo</p>
                   <input
-                    type="range"
-                    min="0.1"
-                    max="0.7"
-                    step="0.05"
-                    value={productScale}
-                    onChange={(e) =>
-                      setProductScale(parseFloat(e.target.value))
-                    }
-                    className="w-full accent-black"
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full bg-black text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-800 transition shadow-md"
+                  >
+                    Upload Photo
+                  </button>
+                </div>
+
+                <div className="flex-1 text-center bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-8 border border-purple-200">
+                  <div className="text-5xl mb-4">✨</div>
+                  <p className="text-purple-900 mb-4 font-medium">Try it on in Live AR</p>
+                  <button
+                    onClick={() => window.location.href=`/try-on?product=${product.id}`}
+                    className="w-full bg-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-purple-700 transition shadow-md"
+                  >
+                    Live Camera
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 mb-4">
+                  <canvas
+                    ref={canvasRef}
+                    className="max-w-full rounded-xl shadow-lg mx-auto"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold mb-2 text-gray-700">
-                    Position
-                  </label>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="0.9"
-                    step="0.01"
-                    value={productPositionY}
-                    onChange={(e) =>
-                      setProductPositionY(parseFloat(e.target.value))
-                    }
-                    className="w-full accent-black"
-                  />
+                {/* Controls */}
+                <div className="space-y-4 mb-4 bg-gray-50 p-4 rounded-xl">
+                  <div>
+                    <label className="block text-sm font-bold mb-2 text-gray-700">
+                      Size: {Math.round(productScale * 100)}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="0.7"
+                      step="0.05"
+                      value={productScale}
+                      onChange={(e) =>
+                        setProductScale(parseFloat(e.target.value))
+                      }
+                      className="w-full accent-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold mb-2 text-gray-700">
+                      Position
+                    </label>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="0.9"
+                      step="0.01"
+                      value={productPositionY}
+                      onChange={(e) =>
+                        setProductPositionY(parseFloat(e.target.value))
+                      }
+                      className="w-full accent-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold mb-2 text-gray-700">
+                      Opacity: {Math.round(opacity * 100)}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0.3"
+                      max="1"
+                      step="0.05"
+                      value={opacity}
+                      onChange={(e) => setOpacity(parseFloat(e.target.value))}
+                      className="w-full accent-black"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold mb-2 text-gray-700">
-                    Opacity: {Math.round(opacity * 100)}%
-                  </label>
-                  <input
-                    type="range"
-                    min="0.3"
-                    max="1"
-                    step="0.05"
-                    value={opacity}
-                    onChange={(e) => setOpacity(parseFloat(e.target.value))}
-                    className="w-full accent-black"
-                  />
+                <div className="flex gap-3">
+                  <button
+                    onClick={downloadImage}
+                    className="flex-1 bg-black text-white px-4 py-3 rounded-xl font-bold hover:bg-gray-800 transition shadow-md"
+                  >
+                    💾 Download
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowTryOn(false);
+                      setUserImage(null);
+                    }}
+                    className="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-xl font-bold hover:bg-gray-300 transition"
+                  >
+                    🔄 Try Again
+                  </button>
                 </div>
               </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={downloadImage}
-                  className="flex-1 bg-black text-white px-4 py-3 rounded-xl font-bold hover:bg-gray-800 transition shadow-md"
-                >
-                  💾 Download
-                </button>
-                <button
-                  onClick={() => {
-                    setShowTryOn(false);
-                    setUserImage(null);
-                  }}
-                  className="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-xl font-bold hover:bg-gray-300 transition"
-                >
-                  🔄 Try Again
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-2xl p-12 shadow-inner border-2 border-dashed border-gray-300 text-center">
+            <div className="text-5xl mb-4 grayscale">👕</div>
+            <h3 className="text-xl font-bold text-gray-500 mb-2">Virtual Try-On Unavailable</h3>
+            <p className="text-gray-400">This feature is currently not supported for this item.</p>
+          </div>
+        )}
       </div>
+
+      <ReviewSection 
+        productId={product.id} 
+        userId={user?.id} 
+        userName={user?.name} 
+      />
     </div >
   );
 };

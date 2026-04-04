@@ -7,11 +7,10 @@ import { API_BASE_URL } from '../config';
 import AuthGuardModal from '../components/AuthGuardModal';
 
 const Cart = () => {
-    const { cartItems, updateQuantity, removeFromCart, getCartTotal, cartError, clearCartError } = useCart();
+    const { cartItems, updateQuantity, removeFromCart, getCartTotal, cartError, clearCartError, appliedCoupon, applyCoupon, removeCoupon } = useCart();
     const { user } = useAuth();
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [couponCode, setCouponCode] = useState('');
-    const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [couponError, setCouponError] = useState('');
     const [couponSuccess, setCouponSuccess] = useState('');
     const [isApplying, setIsApplying] = useState(false);
@@ -33,12 +32,12 @@ const Cart = () => {
             const data = await response.json();
             
             if (response.ok) {
-                setAppliedCoupon(data);
+                applyCoupon(data);
                 setCouponSuccess(`Success! '${data.code}' applied.`);
                 setCouponCode('');
             } else {
                 setCouponError(data.message || 'Invalid coupon code.');
-                setAppliedCoupon(null);
+                removeCoupon();
             }
         } catch (error) {
             setCouponError('Error validating coupon. Please try again.');
@@ -66,6 +65,39 @@ const Cart = () => {
         } else {
             navigate('/checkout');
         }
+    };
+
+    const handleEsewaCheckout = () => {
+        if (!user) {
+            setShowAuthModal(true);
+            return;
+        }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `${API_BASE_URL}/checkout/esewa_init.php`;
+
+        const data = {
+            user_id: user.id,
+            total_amount: finalTotal,
+            items: cartItems.map(item => ({
+                product_id: item.id,
+                quantity: item.quantity,
+                price: item.price
+            }))
+        };
+
+        // Add fields to form
+        Object.keys(data).forEach(key => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = typeof data[key] === 'object' ? JSON.stringify(data[key]) : data[key];
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
     };
 
     if (cartItems.length === 0) {
@@ -100,8 +132,20 @@ const Cart = () => {
                 </div>
             )}
 
+            {(user?.role === 'seller' || user?.role === 'admin') && (
+                <div className="mb-8 p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="flex gap-4 items-start">
+                        <div className="bg-amber-100 p-3 rounded-xl text-2xl">🚧</div>
+                        <div>
+                            <h3 className="text-lg font-black text-amber-900 leading-tight">Purchasing Restricted for Merchant Accounts</h3>
+                            <p className="text-amber-800/80 text-sm mt-1 font-medium">To maintain platform integrity, seller and admin accounts are prohibited from making purchases. Please create or use a separate buyer account for shopping.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-                {cartItems.map(item => (
+                {cartItems.filter(item => !item.is_flagged).map(item => (
                     <div key={item.id} className="flex items-center p-6 border-b border-gray-100 last:border-0">
                         <img src={item.image_url} alt={item.name} className="w-24 h-24 object-cover rounded-lg" />
                         <div className="ml-6 flex-grow">
@@ -168,7 +212,7 @@ const Cart = () => {
                                 </span>
                             </div>
                             <button 
-                                onClick={() => { setAppliedCoupon(null); setCouponSuccess(''); }}
+                                onClick={() => { removeCoupon(); setCouponSuccess(''); }}
                                 className="text-gray-400 hover:text-red-500 transition-colors"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -200,9 +244,33 @@ const Cart = () => {
                     </div>
                     <button
                         onClick={handleCheckout}
-                        className="bg-primary text-white px-8 py-3.5 rounded-xl font-bold hover:bg-gray-800 transition w-full mt-6 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+                        disabled={user?.role === 'seller' || user?.role === 'admin'}
+                        className={`px-8 py-3.5 rounded-xl font-bold transition w-full mt-6 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 text-center ${
+                            (user?.role === 'seller' || user?.role === 'admin') 
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed border-2 border-gray-200' 
+                            : 'bg-primary text-white hover:bg-gray-800'
+                        }`}
                     >
-                        Proceed to Checkout
+                        {(user?.role === 'seller' || user?.role === 'admin') ? "🚫 Checkout Disabled" : "Proceed to Checkout"}
+                    </button>
+                    
+                    <div className="relative my-4 flex items-center">
+                        <div className="flex-grow border-t border-gray-100"></div>
+                        <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold uppercase tracking-widest">OR</span>
+                        <div className="flex-grow border-t border-gray-100"></div>
+                    </div>
+
+                    <button
+                        onClick={handleEsewaCheckout}
+                        disabled={user?.role === 'seller' || user?.role === 'admin'}
+                        className={`w-full py-3.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 hover:-translate-y-0.5 active:translate-y-0 ${
+                            (user?.role === 'seller' || user?.role === 'admin')
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-100'
+                            : 'bg-[#60bb46] hover:bg-[#52a63b] text-white'
+                        }`}
+                    >
+                        <img src="https://esewa.com.np/common/images/esewa_logo.png" alt="eSewa" className={`h-6 ${(user?.role === 'seller' || user?.role === 'admin') ? 'grayscale opacity-50' : 'brightness-0 invert'}`} />
+                        {(user?.role === 'seller' || user?.role === 'admin') ? "🚫 Payment Disabled" : "Pay with eSewa"}
                     </button>
                     <Link to="/shop" className="mt-4 text-gray-500 hover:text-black hover:underline block text-center text-sm font-medium">
                         &larr; Continue Shopping

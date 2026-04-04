@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { API_BASE_URL } from '../config';
+import { useAuth } from '../context/AuthContext';
 
 const Checkout = () => {
-    const { cartItems, getCartTotal, clearCart } = useCart();
+    const { cartItems, getCartTotal, clearCart, appliedCoupon } = useCart();
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         name: '',
@@ -20,14 +22,27 @@ const Checkout = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const calculateDiscount = () => {
+        if (!appliedCoupon) return 0;
+        const subtotal = getCartTotal();
+        if (appliedCoupon.discount_type === 'percentage') {
+            return (subtotal * appliedCoupon.discount_value) / 100;
+        } else {
+            return Math.min(subtotal, appliedCoupon.discount_value);
+        }
+    };
+
+    const finalTotal = getCartTotal() - calculateDiscount();
+
     const handleSubmit = (e) => {
         e.preventDefault();
         setProcessing(true);
 
         // Prepare order data
         const orderData = {
-            user_id: 1, // Mock user ID
-            total_amount: getCartTotal(),
+            user_id: user?.id || 1, // Use actual user ID
+            total_amount: finalTotal,
+            coupon_code: appliedCoupon ? appliedCoupon.code : null,
             items: cartItems.map(item => ({
                 product_id: item.id,
                 quantity: item.quantity,
@@ -154,7 +169,7 @@ const Checkout = () => {
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-fit sticky top-4">
                     <h3 className="text-xl font-bold mb-6">Order Summary</h3>
                     <div className="space-y-4 mb-6">
-                        {cartItems.map(item => (
+                        {cartItems.filter(item => !item.is_flagged).map(item => (
                             <div key={item.id} className="flex gap-4">
                                 <img src={item.image_url} alt={item.name} className="w-16 h-16 object-cover rounded" />
                                 <div className="flex-grow">
@@ -170,13 +185,19 @@ const Checkout = () => {
                             <span>Subtotal:</span>
                             <span>Rs {getCartTotal().toFixed(2)}</span>
                         </div>
+                        {appliedCoupon && (
+                            <div className="flex justify-between text-green-600">
+                                <span>Discount ({appliedCoupon.code}):</span>
+                                <span>-Rs {calculateDiscount().toFixed(2)}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between">
                             <span>Shipping:</span>
                             <span>Free</span>
                         </div>
                         <div className="flex justify-between text-xl font-bold pt-2 border-t">
                             <span>Total:</span>
-                            <span>Rs {getCartTotal().toFixed(2)}</span>
+                            <span>Rs {finalTotal.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>

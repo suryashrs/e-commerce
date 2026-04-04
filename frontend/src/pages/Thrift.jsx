@@ -1,9 +1,64 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { fetchProducts } from "../services/api";
 import { useWishlist } from "../context/WishlistContext";
+import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
+
+// Thrift-themed hero slides
+const heroSlides = [
+    {
+        image: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=2074&auto=format&fit=crop",
+        tag: "Sustainable Fashion",
+        headline: "Preloved.\nPerfect.",
+        sub: "Give clothes a second life. Save money, save the planet.",
+        cta: { label: "Browse Thrift", anchor: "#products" },
+        badge: "♻️ Eco-Friendly",
+    },
+    {
+        image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop",
+        tag: "Up to 70% Off",
+        headline: "Hidden Gems\nAwaiting You",
+        sub: "One-of-a-kind vintage finds you won't see anywhere else.",
+        cta: { label: "Shop Now", anchor: "#products" },
+        badge: "⭐ Quality Checked",
+    },
+    {
+        image: "https://images.unsplash.com/photo-1467043237213-65f2da53396f?q=80&w=2070&auto=format&fit=crop",
+        tag: "Circular Fashion",
+        headline: "Style the\nEarth Loves",
+        sub: "Every purchase reduces waste and supports a greener future.",
+        cta: { label: "Explore Finds", anchor: "#products" },
+        badge: "💚 Planet-First",
+    },
+];
 
 const Thrift = () => {
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+
+    const goToSlide = useCallback((index) => {
+        if (isTransitioning) return;
+        setIsTransitioning(true);
+        setCurrentSlide(index);
+        setTimeout(() => setIsTransitioning(false), 600);
+    }, [isTransitioning]);
+
+    const nextSlide = useCallback(() => {
+        goToSlide((currentSlide + 1) % heroSlides.length);
+    }, [currentSlide, goToSlide]);
+
+    const prevSlide = useCallback(() => {
+        goToSlide((currentSlide - 1 + heroSlides.length) % heroSlides.length);
+    }, [currentSlide, goToSlide]);
+
+    useEffect(() => {
+        const timer = setInterval(nextSlide, 5000);
+        return () => clearInterval(timer);
+    }, [nextSlide]);
+
+    const slide = heroSlides[currentSlide];
+
+
     const [thriftProducts, setThriftProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [selectedCondition, setSelectedCondition] = useState("all");
@@ -82,35 +137,90 @@ const Thrift = () => {
 
     return (
         <div>
-            {/* Hero Section */}
-            <section className="relative mb-12 bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-3xl shadow-2xl overflow-hidden">
-                <div className="absolute inset-0 opacity-10">
-                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC40Ij48cGF0aCBkPSJNMzYgMzRjMC0yLjIxLTEuNzktNC00LTRzLTQgMS43OS00IDQgMS43OSA0IDQgNCA0LTEuNzkgNC00em0wLTEwYzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] animate-pulse"></div>
-                </div>
-                <div className="relative z-10 py-16 px-8 text-center">
-                    <div className="inline-block mb-4">
-                        <span className="text-6xl">♻️</span>
+            {/* ── Hero Carousel ── */}
+            <section
+                className="relative rounded-2xl sm:rounded-3xl overflow-hidden mb-12 shadow-2xl"
+                style={{ height: 'clamp(320px, 55vh, 580px)' }}
+            >
+                {heroSlides.map((s, i) => (
+                    <div
+                        key={i}
+                        className="absolute inset-0 transition-opacity duration-700"
+                        style={{ opacity: i === currentSlide ? 1 : 0, zIndex: i === currentSlide ? 1 : 0 }}
+                    >
+                        <img src={s.image} alt={s.tag} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-transparent" />
                     </div>
-                    <h1 className="text-5xl font-bold mb-4 text-white drop-shadow-lg">
-                        Thrift Shop
+                ))}
+
+                {/* Content */}
+                <div className="absolute inset-0 z-10 flex flex-col justify-center px-8 sm:px-16">
+                    <span
+                        key={`tag-${currentSlide}`}
+                        className="inline-block text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-emerald-400 mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500"
+                    >
+                        {slide.tag}
+                    </span>
+                    <h1
+                        key={`h-${currentSlide}`}
+                        className="text-4xl sm:text-7xl font-black text-white leading-none tracking-tighter mb-5 whitespace-pre-line animate-in fade-in slide-in-from-bottom-4 duration-500"
+                    >
+                        {slide.headline}
                     </h1>
-                    <p className="text-xl text-white mb-6 font-light drop-shadow-md max-w-2xl mx-auto">
-                        Discover sustainable fashion with pre-loved treasures. Save money,
-                        save the planet, and look fabulous doing it! 🌍✨
+                    <p
+                        key={`p-${currentSlide}`}
+                        className="text-sm sm:text-lg text-white/75 mb-7 max-w-sm font-medium animate-in fade-in slide-in-from-bottom-6 duration-500"
+                    >
+                        {slide.sub}
                     </p>
-                    <div className="flex gap-4 justify-center flex-wrap">
-                        <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-full text-white font-semibold">
-                            💚 Eco-Friendly
-                        </div>
-                        <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-full text-white font-semibold">
-                            💰 Up to 70% Off
-                        </div>
-                        <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-full text-white font-semibold">
-                            ⭐ Quality Checked
-                        </div>
+                    <div className="flex flex-wrap gap-3 items-center">
+                        <a
+                            href="#thrift-products"
+                            className="bg-white text-black px-7 py-3.5 rounded-full font-black hover:bg-gray-100 transition shadow-xl text-sm sm:text-base"
+                        >
+                            {slide.cta.label}
+                        </a>
+                        <span className="bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 text-emerald-300 px-5 py-3 rounded-full text-xs sm:text-sm font-bold">
+                            {slide.badge}
+                        </span>
                     </div>
+                </div>
+
+                {/* Arrows */}
+                <button
+                    onClick={prevSlide}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white hover:bg-black/60 transition"
+                >
+                    <ChevronLeft size={20} />
+                </button>
+                <button
+                    onClick={nextSlide}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white hover:bg-black/60 transition"
+                >
+                    <ChevronRight size={20} />
+                </button>
+
+                {/* Dots */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+                    {heroSlides.map((_, i) => (
+                        <button
+                            key={i}
+                            onClick={() => goToSlide(i)}
+                            className={`transition-all duration-300 rounded-full ${
+                                i === currentSlide
+                                    ? 'w-8 h-2 bg-emerald-400'
+                                    : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+                            }`}
+                        />
+                    ))}
+                </div>
+
+                {/* Counter */}
+                <div className="absolute bottom-6 right-6 z-20 text-white/50 text-xs font-black tabular-nums">
+                    {String(currentSlide + 1).padStart(2, '0')} / {String(heroSlides.length).padStart(2, '0')}
                 </div>
             </section>
+
 
             {/* Stats Section */}
             <div className="grid grid-cols-1 gap-6 mb-12 max-w-md mx-auto">
@@ -236,24 +346,9 @@ const Thrift = () => {
                                                 e.preventDefault();
                                                 toggleWishlist(product);
                                             }}
-                                            className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-lg hover:scale-110 transition-transform z-10"
-                                            title={isInWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+                                            className="absolute top-3 right-3 bg-white/80 backdrop-blur-md rounded-full p-2 shadow-md hover:scale-110 transition z-10"
                                         >
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                className="h-5 w-5"
-                                                fill={isInWishlist(product.id) ? "currentColor" : "none"}
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth={2}
-                                                style={{ color: isInWishlist(product.id) ? "#ef4444" : "#000" }}
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                                                />
-                                            </svg>
+                                            <Heart size={16} fill={isInWishlist(product.id) ? "currentColor" : "none"} className={isInWishlist(product.id) ? "text-rose-500" : "text-black"} />
                                         </button>
 
                                         <div className="aspect-square overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
