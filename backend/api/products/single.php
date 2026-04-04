@@ -12,6 +12,6 @@ $id = isset($_GET['id']) ? $_GET['id'] : die();
 $controller = new ProductController($db);
 $response = $controller->show($id);
 
-http_response_code($response['status']);
-echo json_encode($response['body']);
+    http_response_code(200);
+    echo json_encode($response['body'] ?? []);
 ?>

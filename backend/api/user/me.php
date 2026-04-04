@@ -26,7 +26,12 @@ if($user->readOne()){
         "bio" => $user->bio,
         "phone" => $user->phone,
         "website" => $user->website,
-        "calendar_url" => $user->calendar_url
+        "calendar_url" => $user->calendar_url,
+        "shop_status" => $user->shop_status,
+        "shop_name" => $user->shop_name,
+        "shop_number" => $user->shop_number,
+        "shop_address" => $user->shop_address,
+        "shop_phone" => $user->shop_phone
     );
     http_response_code(200);
     echo json_encode($user_arr);

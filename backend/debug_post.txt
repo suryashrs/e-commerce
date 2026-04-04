@@ -1,11 +1,12 @@
 Array
 (
-    [name] => sunny
-    [price] => 1999.00
-    [category] => Tops
-    [description] => nice fabric
-    [stock] => 10
-    [image_url] => http://localhost/e-commerce/backend/uploads/1773562536_lena_gray.gif
-    [id] => 21
-    [_method] => PUT
+    [name] => Tops
+    [category] => tops
+    [price] => 10000
+    [description] => abc d
+    [stock] => -2
+    [seller_id] => 17
+    [sizes] => ["S"]
+    [colors] => ["Red"]
+    [has_tryon] => 1
 )

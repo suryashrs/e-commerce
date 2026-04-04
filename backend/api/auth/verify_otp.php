@@ -36,6 +36,14 @@ $user->password = $data->password;
 $valid_roles  = ['buyer', 'seller'];
 $user->role   = isset($data->role) && in_array($data->role, $valid_roles) ? $data->role : 'buyer';
 
+if ($user->role === 'seller') {
+    $user->shop_name    = isset($data->shop_name) ? $data->shop_name : '';
+    $user->shop_number  = isset($data->shop_number) ? $data->shop_number : '';
+    $user->shop_address = isset($data->shop_address) ? $data->shop_address : '';
+    $user->shop_phone   = isset($data->shop_phone) ? $data->shop_phone : '';
+    $user->shop_status  = 'pending';
+}
+
 if (!$user->create()) {
     // Could be a race condition (duplicate email registered concurrently)
     http_response_code(503);
@@ -53,7 +61,8 @@ echo json_encode([
         "id"    => $user->id,
         "name"  => $user->name,
         "email" => $user->email,
-        "role"  => $user->role
+        "role"  => $user->role,
+        "shop_status" => $user->shop_status
     ]
 ]);
 ?>

@@ -10,6 +10,7 @@ class User {
     public $email;
     public $password;
     public $role;
+    public $status; // Add this
 
     public $avatar;
     public $location;
@@ -17,6 +18,13 @@ class User {
     public $phone;
     public $website;
     public $calendar_url;
+    
+    // Shop specific fields
+    public $shop_status;
+    public $shop_name;
+    public $shop_number;
+    public $shop_address;
+    public $shop_phone;
 
     public function __construct($db){
         $this->conn = $db;
@@ -24,7 +32,7 @@ class User {
 
     // Create new user (Signup)
     public function create(){
-        $query = "INSERT INTO " . $this->table_name . " SET name=:name, email=:email, password_hash=:password_hash, plain_password=:plain_password, role=:role";
+        $query = "INSERT INTO " . $this->table_name . " SET name=:name, email=:email, password_hash=:password_hash, plain_password=:plain_password, role=:role, shop_name=:shop_name, shop_number=:shop_number, shop_address=:shop_address, shop_phone=:shop_phone, shop_status=:shop_status";
         $stmt = $this->conn->prepare($query);
 
         // Sanitize
@@ -42,6 +50,19 @@ class User {
         $stmt->bindParam(":password_hash", $password_hash);
         $stmt->bindParam(":plain_password", $this->password);
         $stmt->bindParam(":role", $this->role);
+        
+        // Bind Shop details
+        $this->shop_name = htmlspecialchars(strip_tags($this->shop_name));
+        $this->shop_number = htmlspecialchars(strip_tags($this->shop_number));
+        $this->shop_address = htmlspecialchars(strip_tags($this->shop_address));
+        $this->shop_phone = htmlspecialchars(strip_tags($this->shop_phone));
+        $this->shop_status = !empty($this->shop_status) ? $this->shop_status : ($this->role === 'seller' ? 'pending' : 'none');
+
+        $stmt->bindParam(":shop_name", $this->shop_name);
+        $stmt->bindParam(":shop_number", $this->shop_number);
+        $stmt->bindParam(":shop_address", $this->shop_address);
+        $stmt->bindParam(":shop_phone", $this->shop_phone);
+        $stmt->bindParam(":shop_status", $this->shop_status);
 
         if($stmt->execute()){
             $this->id = $this->conn->lastInsertId();
@@ -52,7 +73,7 @@ class User {
 
     // Check if email exists
     public function emailExists(){
-        $query = "SELECT id, name, password_hash, role, avatar, location, bio, phone, website, calendar_url FROM " . $this->table_name . " WHERE email = ? LIMIT 0,1";
+        $query = "SELECT id, name, password_hash, role, avatar, location, bio, phone, website, calendar_url, shop_status, shop_name, shop_number, shop_address, shop_phone FROM " . $this->table_name . " WHERE email = ? LIMIT 0,1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(1, $this->email);
         $stmt->execute();
@@ -69,6 +90,11 @@ class User {
             $this->phone = $row['phone'];
             $this->website = $row['website'];
             $this->calendar_url = $row['calendar_url'];
+            $this->shop_status = $row['shop_status'];
+            $this->shop_name = $row['shop_name'];
+            $this->shop_number = $row['shop_number'];
+            $this->shop_address = $row['shop_address'];
+            $this->shop_phone = $row['shop_phone'];
             return true;
         }
         return false;
@@ -76,7 +102,7 @@ class User {
 
     // Get Single User details
     public function readOne(){
-         $query = "SELECT id, name, email, role, avatar, location, bio, phone, website, calendar_url FROM " . $this->table_name . " WHERE id = ? LIMIT 0,1";
+         $query = "SELECT id, name, email, role, avatar, location, bio, phone, website, calendar_url, shop_status, shop_name, shop_number, shop_address, shop_phone FROM " . $this->table_name . " WHERE id = ? LIMIT 0,1";
          $stmt = $this->conn->prepare($query);
          $stmt->bindParam(1, $this->id);
          $stmt->execute();
@@ -92,6 +118,11 @@ class User {
              $this->phone = $row['phone'];
              $this->website = $row['website'];
              $this->calendar_url = $row['calendar_url'];
+             $this->shop_status = $row['shop_status'];
+             $this->shop_name = $row['shop_name'];
+             $this->shop_number = $row['shop_number'];
+             $this->shop_address = $row['shop_address'];
+             $this->shop_phone = $row['shop_phone'];
              return true;
          }
          return false;
@@ -177,6 +208,26 @@ class User {
             return true;
         }
         return false;
+    }
+
+    // Approve Seller
+    public function updateShopStatus($id, $status){
+        $query = "UPDATE " . $this->table_name . " SET shop_status = :status WHERE id = :id AND role = 'seller'";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':status', $status);
+        $stmt->bindParam(':id', $id);
+        return $stmt->execute();
+    }
+
+    // List Pending Sellers
+    public function getPendingSellers(){
+        $query = "SELECT id, name, email, shop_name, shop_number, shop_address, shop_phone, created_at 
+                  FROM " . $this->table_name . " 
+                  WHERE role = 'seller' AND shop_status = 'pending' 
+                  ORDER BY created_at DESC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt;
     }
 }
 ?>

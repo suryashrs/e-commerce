@@ -9,7 +9,6 @@ $db = $database->getConnection();
 
 $controller = new ProductController($db);
 $response = $controller->index();
-
-http_response_code($response['status']);
-echo json_encode($response['body']);
+http_response_code(200);
+echo json_encode($response['body'] ?? []);
 ?>

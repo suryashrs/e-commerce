@@ -18,6 +18,13 @@ class AuthController {
             
             if($this->user->emailExists()){
                 if(password_verify($data->password, $this->user->password)){
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_start();
+                    }
+                    $_SESSION['user_id'] = $this->user->id;
+                    $_SESSION['role'] = $this->user->role;
+                    $_SESSION['name'] = $this->user->name;
+
                     return array(
                         "status" => 200,
                         "body" => array(

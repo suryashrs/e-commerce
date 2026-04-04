@@ -97,5 +97,12 @@ class Coupon {
         $stmt->bindParam(":id", $this->id);
         return $stmt->execute();
     }
+
+    public function incrementUsage($id){
+        $query = "UPDATE " . $this->table_name . " SET usage_count = usage_count + 1 WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":id", $id);
+        return $stmt->execute();
+    }
 }
 ?>
