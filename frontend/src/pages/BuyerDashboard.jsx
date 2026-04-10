@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 import { API_BASE_URL } from '../config';
 import { 
     User, 
@@ -40,6 +41,11 @@ const BuyerDashboard = () => {
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     
+    // Payment Success state
+    const [paymentSuccessModal, setPaymentSuccessModal] = useState(false);
+    const [completedOrderId, setCompletedOrderId] = useState(null);
+    const { clearCart } = useCart();
+    
     // Profile form state
     const [formData, setFormData] = useState({
         name: '',
@@ -71,7 +77,21 @@ const BuyerDashboard = () => {
     useEffect(() => {
         const tab = getInitialTab();
         setActiveTab(tab);
-    }, [location.pathname]);
+        
+        // Handle eSewa success
+        const params = new URLSearchParams(location.search);
+        if (params.get('payment') === 'success') {
+            setCompletedOrderId(params.get('order_id'));
+            setPaymentSuccessModal(true);
+            clearCart();
+            // Clean up URL
+            navigate('/buyer', { replace: true });
+        }
+    }, [location.pathname, location.search, navigate, clearCart]);
+
+    if (!user) {
+        return null; // Don't render until authentication redirects or user is loaded
+    }
 
     const fetchProfileData = () => {
         fetch(`${API_BASE_URL}/user/me.php?id=${user.id}`)
@@ -601,6 +621,36 @@ const BuyerDashboard = () => {
                     </main>
                 </div>
             </div>
+
+            {/* Payment Success Modal Overlay */}
+            {paymentSuccessModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[3rem] shadow-2xl max-w-sm w-full p-10 text-center animate-in zoom-in-95 duration-500 flex flex-col items-center">
+                        <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6 text-green-500 shadow-inner">
+                            <CheckCircle2 size={48} strokeWidth={3} />
+                        </div>
+                        <h2 className="text-3xl font-black mb-2 tracking-tight">Success!</h2>
+                        <p className="text-gray-500 font-medium mb-8">
+                            Your payment is completed for order #{completedOrderId}.
+                        </p>
+                        
+                        <Link 
+                            to="/shop" 
+                            onClick={() => setPaymentSuccessModal(false)}
+                            className="w-full bg-black text-white px-8 py-4 rounded-full font-black text-sm uppercase tracking-widest hover:-translate-y-1 hover:shadow-xl active:translate-y-0 transition-all block"
+                        >
+                            Continue Shopping
+                        </Link>
+                        
+                        <button 
+                            onClick={() => setPaymentSuccessModal(false)}
+                            className="mt-6 text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-black transition"
+                        >
+                            View Order
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

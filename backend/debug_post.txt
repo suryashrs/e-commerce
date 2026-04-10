@@ -1,12 +1,12 @@
 Array
 (
-    [name] => Tops
+    [name] => pink
     [category] => tops
-    [price] => 10000
-    [description] => abc d
-    [stock] => -2
+    [price] => 1223
+    [description] => ssss
+    [stock] => 1
     [seller_id] => 17
-    [sizes] => ["S"]
-    [colors] => ["Red"]
+    [sizes] => ["s"]
+    [colors] => ["red"]
     [has_tryon] => 1
 )

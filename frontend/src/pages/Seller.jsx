@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
     User, 
     Box, 
@@ -448,6 +448,11 @@ const Seller = () => {
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            if (!file.type.startsWith("image/")) {
+                alert("Please upload a valid image file (PNG, JPG, WEBP). PDF and other files are not allowed.");
+                e.target.value = "";
+                return;
+            }
             setImage(file);
             const reader = new FileReader();
             reader.onloadend = () => setImagePreview(reader.result);
@@ -531,8 +536,10 @@ const Seller = () => {
         setLoading(true);
         setMessage({ type: '', text: '' });
 
-        if (!formData.name || !formData.price || !formData.category) {
-            setMessage({ type: 'error', text: 'Please fill in required fields' });
+        const isImageProvided = (imageInputType === "file" && image) || (imageInputType === "url" && imageUrlInput);
+
+        if (!formData.name || !formData.price || !formData.category || !formData.stock || !formData.sizes || !formData.colors || !formData.description || !isImageProvided) {
+            setMessage({ type: 'error', text: 'Please fill in all required fields' });
             setLoading(false);
             return;
         }
@@ -656,13 +663,125 @@ const Seller = () => {
             } else {
                 setCouponMessage({ type: 'error', text: result.message || 'Failed to create coupon' });
             }
-        } catch (error) {
-            console.error(error);
-            setCouponMessage({ type: 'error', text: 'An error occurred while creating coupon.' });
-        } finally {
-            setCouponLoading(false);
-        }
+    } catch (error) {
+        console.error(error);
+        setCouponMessage({ type: 'error', text: 'An error occurred while creating coupon.' });
+    } finally {
+        setCouponLoading(false);
+    }
+};
+
+    const handleProfileChange = (e) => {
+        const { name, value } = e.target;
+        setProfileData(prev => ({ ...prev, [name]: value }));
     };
+
+    const renderProfile = () => (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-10 py-8 border-b border-gray-50 flex justify-between items-center">
+                    <div>
+                        <h2 className="text-2xl font-black tracking-tight">Edit Merchant Profile</h2>
+                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Store / Personal Settings</p>
+                    </div>
+                </div>
+                <form onSubmit={handleProfileSubmit} className="p-10 space-y-10">
+                    <div className="flex items-center gap-8 pb-8 border-b border-gray-50">
+                        <div className="relative group">
+                            {user?.avatar ? (
+                                <img src={user.avatar} alt="Profile" className="w-24 h-24 rounded-full object-cover border-4 border-gray-50 shadow-md group-hover:scale-105 transition-transform duration-500" />
+                            ) : (
+                                <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center text-white font-black text-2xl border-4 border-gray-50 shadow-md group-hover:scale-105 transition-transform duration-500">
+                                    {user?.name?.charAt(0).toUpperCase() || 'S'}
+                                </div>
+                            )}
+                            <label className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-lg border border-gray-100 cursor-pointer hover:bg-gray-50 transition active:scale-95">
+                                <Camera size={16} className="text-gray-900" />
+                                <input type="file" className="hidden" onChange={handleAvatarUpload} accept="image/*" />
+                            </label>
+                        </div>
+                        <div>
+                            <h3 className="font-black text-lg">Merchant Photo</h3>
+                            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">PNG, JPG up to 5MB</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 font-sans">
+                        <div className="space-y-3">
+                            <label className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Full Name</label>
+                            <div className="relative group">
+                                <User size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black transition-colors" />
+                                <input 
+                                    type="text" name="name" value={profileData.name} onChange={handleProfileChange}
+                                    placeholder="e.g. Jane Smith"
+                                    className="w-full pl-14 pr-6 py-4 bg-gray-50/50 border border-transparent focus:bg-white focus:border-gray-200 rounded-2xl transition font-bold"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                             <label className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Location</label>
+                             <div className="relative group">
+                                <MapPin size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black transition-colors" />
+                                <input 
+                                    type="text" name="location" value={profileData.location} onChange={handleProfileChange}
+                                    placeholder="e.g. New York, USA"
+                                    className="w-full pl-14 pr-6 py-4 bg-gray-50/50 border border-transparent focus:bg-white focus:border-gray-200 rounded-2xl transition font-bold"
+                                />
+                             </div>
+                        </div>
+                        <div className="space-y-3">
+                             <label className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Phone Number</label>
+                             <div className="relative group">
+                                <Phone size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black transition-colors" />
+                                <input 
+                                    type="text" name="phone" value={profileData.phone} onChange={handleProfileChange}
+                                    placeholder="+1 234 567 890"
+                                    className="w-full pl-14 pr-6 py-4 bg-gray-50/50 border border-transparent focus:bg-white focus:border-gray-200 rounded-2xl transition font-bold"
+                                />
+                             </div>
+                        </div>
+                        <div className="space-y-3">
+                             <label className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Website</label>
+                             <div className="relative group">
+                                <Globe size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black transition-colors" />
+                                <input 
+                                    type="text" name="website" value={profileData.website} onChange={handleProfileChange}
+                                    placeholder="https://yourstore.com"
+                                    className="w-full pl-14 pr-6 py-4 bg-gray-50/50 border border-transparent focus:bg-white focus:border-gray-200 rounded-2xl transition font-bold"
+                                />
+                             </div>
+                        </div>
+                        <div className="space-y-3">
+                             <label className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Calendar URL</label>
+                             <div className="relative group">
+                                <Calendar size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black transition-colors" />
+                                <input 
+                                    type="text" name="calendar_url" value={profileData.calendar_url} onChange={handleProfileChange}
+                                    placeholder="e.g. calendly.com/username"
+                                    className="w-full pl-14 pr-6 py-4 bg-gray-50/50 border border-transparent focus:bg-white focus:border-gray-200 rounded-2xl transition font-bold"
+                                />
+                             </div>
+                        </div>
+                        <div className="md:col-span-2 space-y-3">
+                            <label className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Bio / Store Description</label>
+                            <textarea 
+                                name="bio" rows="4" value={profileData.bio} onChange={handleProfileChange}
+                                placeholder="Describe your store and products..."
+                                className="w-full px-8 py-6 bg-gray-50/50 border border-transparent focus:bg-white focus:border-gray-200 rounded-[2.5rem] transition font-bold resize-none"
+                            ></textarea>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest pl-2">Max 1024 characters</p>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end pt-8">
+                        <button type="submit" disabled={loading} className="bg-black text-white px-12 py-5 rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition shadow-2xl hover:shadow-black/20">
+                            {loading ? 'Saving...' : 'Update Merchant Profile'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
 
     if (!user) {
         return (

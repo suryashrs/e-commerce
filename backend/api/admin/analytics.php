@@ -84,7 +84,7 @@ $sellers_query = "
     LEFT JOIN transactions t ON t.seller_id = u.id
     LEFT JOIN orders o ON t.order_id = o.id AND o.status = 'delivered'
     LEFT JOIN products p ON p.seller_id = u.id
-    WHERE u.role = 'seller' AND u.status = 'active'
+    WHERE u.role = 'seller' AND u.shop_status = 'approved'
     GROUP BY u.id
     ORDER BY total_revenue DESC
 ";

@@ -29,8 +29,8 @@ if ($verification['success']) {
     $stmt->bindParam(":order_id", $order_id);
     
     if ($stmt->execute()) {
-        // Redirect to a frontend success page
-        $frontendUrl = "http://localhost:5173/profile"; // Redirect to profile/orders page
+        // Redirect to a frontend success page (Buyer Dashboard)
+        $frontendUrl = "http://localhost:5173/buyer"; 
         header("Location: $frontendUrl?payment=success&order_id=$order_id");
         exit;
     } else {

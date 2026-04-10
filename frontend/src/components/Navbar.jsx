@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useWishlist } from "../context/WishlistContext";
 import { useAuth } from "../context/AuthContext";
 import { API_BASE_URL } from "../config";
 import { 
@@ -21,6 +22,7 @@ import {
 
 const Navbar = () => {
   const { getCartCount } = useCart();
+  const { getWishlistCount } = useWishlist();
   const { user, viewMode, toggleViewMode, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -32,6 +34,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const cartCount = getCartCount();
+  const wishlistCount = getWishlistCount();
 
   useEffect(() => {
     if (user) {
@@ -98,6 +101,21 @@ const Navbar = () => {
     }
   };
 
+  const handleMarkAll = async () => {
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+    try {
+      await fetch(`${API_BASE_URL}/notifications/mark_all_read.php`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: user.id })
+      });
+      window.dispatchEvent(new Event('notificationsUpdated'));
+    } catch(e) {
+      console.error("Failed to mark all as read", e);
+    }
+  };
+
   return (
     <nav className="bg-gradient-to-r from-black via-gray-900 to-gray-800 shadow-xl sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -155,9 +173,14 @@ const Navbar = () => {
               </Link>
             )}
             {/* Utility Icons (Shared Mobile/Desktop) */}
-            <div className="flex items-center gap-4 sm:gap-5">
-              <Link to="/wishlist" className="text-white/80 hover:text-white transition relative hidden sm:flex">
+            <div className="flex items-center gap-5 sm:gap-6">
+              <Link to="/wishlist" className="text-white/80 hover:text-white transition relative flex items-center">
                 <Heart size={22} />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-black shadow-lg">
+                    {wishlistCount}
+                  </span>
+                )}
               </Link>
               
               <Link to="/cart" className="text-white/80 hover:text-white transition relative flex items-center">
@@ -171,10 +194,10 @@ const Navbar = () => {
 
               {user && (
                 <div className="relative">
-                  <button onClick={() => setShowNotifications(!showNotifications)} className="text-white/80 hover:text-white transition relative">
+                  <button onClick={() => setShowNotifications(!showNotifications)} className="text-white/80 hover:text-white transition relative block">
                     <Bell size={22} />
                     {unreadCount > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] rounded-full h-4 w-4 flex items-center justify-center font-black">
+                      <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-black shadow-lg">
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
@@ -186,7 +209,7 @@ const Navbar = () => {
                        <div className="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
                         <h3 className="font-black text-gray-900 text-xs uppercase tracking-widest">Activity</h3>
                         {unreadCount > 0 && (
-                          <button onClick={() => {}} className="text-[9px] font-black text-indigo-600 uppercase">Mark All</button>
+                          <button onClick={handleMarkAll} className="text-[9px] font-black text-indigo-600 uppercase hover:text-indigo-800 transition">Mark All</button>
                         )}
                       </div>
                       <div className="max-h-64 overflow-y-auto">

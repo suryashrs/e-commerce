@@ -8,6 +8,12 @@ include_once '../../src/Services/OtpService.php';
 $database = new Database();
 $db = $database->getConnection();
 
+if ($db === null) {
+    http_response_code(500);
+    echo json_encode(["message" => "Database connection failed. Please check if MySQL is running."]);
+    exit;
+}
+
 $data = json_decode(file_get_contents("php://input"));
 
 if (empty($data->name) || empty($data->email) || empty($data->password)) {
