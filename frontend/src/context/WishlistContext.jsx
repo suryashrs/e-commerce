@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { useAuth } from './AuthContext';
 
 const WishlistContext = createContext();
 
@@ -10,21 +11,46 @@ export const useWishlist = () => {
     return context;
 };
 
+// Helper to get storage key based on user login status
+const getStorageKey = (userId) => userId ? `wearit_wishlist_user_${userId}` : 'wearit_wishlist_guest';
+
 export const WishlistProvider = ({ children }) => {
+    const { user, loading: authLoading } = useAuth();
+    
+    // Initial state
     const [wishlistItems, setWishlistItems] = useState([]);
 
-    // Load wishlist from localStorage on mount
-    useEffect(() => {
-        const savedWishlist = localStorage.getItem('wearit_wishlist');
-        if (savedWishlist) {
-            setWishlistItems(JSON.parse(savedWishlist));
-        }
-    }, []);
+    // Refs to track state and prevent race conditions
+    const lastLoadedUserRef = useRef(undefined);
 
-    // Save wishlist to localStorage whenever it changes
+    // 1. Sync State with LocalStorage whenever User changes
     useEffect(() => {
-        localStorage.setItem('wearit_wishlist', JSON.stringify(wishlistItems));
-    }, [wishlistItems]);
+        if (authLoading) return;
+
+        const currentUserId = user?.id || null;
+
+        if (lastLoadedUserRef.current !== currentUserId) {
+            const key = getStorageKey(currentUserId);
+            const saved = localStorage.getItem(key);
+            try {
+                const parsed = saved ? JSON.parse(saved) : [];
+                setWishlistItems(Array.isArray(parsed) ? parsed : []);
+            } catch (e) {
+                setWishlistItems([]);
+            }
+            lastLoadedUserRef.current = currentUserId;
+        }
+    }, [user, authLoading]);
+
+    // 2. Persist State to LocalStorage whenever Wishlist changes
+    useEffect(() => {
+        if (authLoading || lastLoadedUserRef.current === undefined) return;
+
+        const currentUserId = user?.id || null;
+        const key = getStorageKey(currentUserId);
+        
+        localStorage.setItem(key, JSON.stringify(wishlistItems));
+    }, [wishlistItems, user, authLoading]);
 
     const addToWishlist = (product) => {
         setWishlistItems(prevItems => {
@@ -54,13 +80,7 @@ export const WishlistProvider = ({ children }) => {
         return wishlistItems.some(item => item.id === productId);
     };
 
-    const clearWishlist = () => {
-        setWishlistItems([]);
-    };
-
-    const getWishlistCount = () => {
-        return wishlistItems.length;
-    };
+    const clearWishlist = () => setWishlistItems([]);
 
     const value = {
         wishlistItems,
@@ -69,7 +89,7 @@ export const WishlistProvider = ({ children }) => {
         toggleWishlist,
         isInWishlist,
         clearWishlist,
-        getWishlistCount
+        getWishlistCount: () => wishlistItems.length
     };
 
     return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;

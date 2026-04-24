@@ -69,7 +69,7 @@ const Login = () => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Email Address
@@ -79,7 +79,8 @@ const Login = () => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition duration-200 outline-none"
-                                placeholder="suryashrestha@gmail.com"
+                                placeholder="Email Address"
+                                autoComplete="off"
                                 required
                             />
                         </div>
@@ -93,7 +94,8 @@ const Login = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition duration-200 outline-none"
-                                placeholder="••••••••"
+                                placeholder="Enter password"
+                                autoComplete="new-password"
                                 required
                             />
                         </div>
@@ -119,8 +121,12 @@ const Login = () => {
 
                         <button
                             type="submit"
-                            disabled={isLoading}
-                            className={`w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-lg font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition duration-200 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            disabled={isLoading || !email.trim() || !password.trim()}
+                            className={`w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-lg font-medium text-white transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black ${
+                                isLoading || !email.trim() || !password.trim()
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-black hover:bg-gray-800'
+                            }`}
                         >
                             {isLoading ? 'Signing In...' : 'Sign In'}
                         </button>

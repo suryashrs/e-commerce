@@ -196,31 +196,31 @@ const Signup = () => {
                                 </div>
                             )}
 
-                            <form onSubmit={handleSendOtp} className="space-y-5">
+                            <form onSubmit={handleSendOtp} className="space-y-5" autoComplete="off">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                                     <input type="text" value={name} onChange={(e) => setName(e.target.value)}
                                         className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition duration-200 outline-none"
-                                        placeholder="Surya Shrestha" required />
+                                        placeholder="Full Name" required />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                                         className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition duration-200 outline-none"
-                                        placeholder="you@example.com" required />
+                                        placeholder="Email Address" autoComplete="off" required />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
                                         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                                             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition duration-200 outline-none"
-                                            placeholder="••••••••" required />
+                                            placeholder="Enter password" autoComplete="new-password" required />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Confirm</label>
                                         <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                                             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition duration-200 outline-none"
-                                            placeholder="••••••••" required />
+                                            placeholder="Confirm password" autoComplete="new-password" required />
                                     </div>
                                 </div>
                                 <div>
@@ -276,8 +276,19 @@ const Signup = () => {
                                         I agree to the <a href="#" className="font-bold underline">Terms of Service</a> and <a href="#" className="font-bold underline">Privacy Policy</a>
                                     </label>
                                 </div>
-                                <button type="submit" disabled={isLoading}
-                                    className={`w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-lg font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition duration-200 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                                <button type="submit"
+                                    disabled={
+                                        isLoading ||
+                                        !name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim() ||
+                                        (role === 'seller' && (!shopName.trim() || !shopNumber.trim() || !shopAddress.trim() || !shopPhone.trim()))
+                                    }
+                                    className={`w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-lg font-medium text-white transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black ${
+                                        isLoading ||
+                                        !name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim() ||
+                                        (role === 'seller' && (!shopName.trim() || !shopNumber.trim() || !shopAddress.trim() || !shopPhone.trim()))
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-black hover:bg-gray-800'
+                                    }`}>
                                     {isLoading ? (
                                         <span className="flex items-center gap-2">
                                             <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

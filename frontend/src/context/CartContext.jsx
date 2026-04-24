@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
@@ -11,40 +11,57 @@ export const useCart = () => {
     return context;
 };
 
+// Helper to get the correct storage key based on user login status
+const getStorageKey = (userId) => userId ? `everbody_cart_user_${userId}` : 'everbody_cart_guest';
+
 export const CartProvider = ({ children }) => {
-    const { user, viewMode } = useAuth();
+    const { user, viewMode, loading: authLoading } = useAuth();
+    
+    // Initial state is empty. We will load data in an effect.
     const [cartItems, setCartItems] = useState([]);
     const [cartError, setCartError] = useState(null);
     const [cartSuccess, setCartSuccess] = useState(null);
     const [appliedCoupon, setAppliedCoupon] = useState(null);
 
-    // Load cart from localStorage on mount
-    useEffect(() => {
-        const savedCart = localStorage.getItem('everbody_cart');
-        if (savedCart) {
-            try {
-                const parsed = JSON.parse(savedCart);
-                if (Array.isArray(parsed)) {
-                    setCartItems(parsed);
-                } else {
-                    console.warn("Cart ignored as it's not an array");
-                    localStorage.removeItem('everbody_cart');
-                }
-            } catch (e) {
-                console.error("Failed to parse cart storage", e);
-                localStorage.removeItem('everbody_cart');
-            }
-        }
-    }, []);
+    // Refs to track state and prevent race conditions
+    const lastLoadedUserRef = useRef(undefined);
+    const isFirstRender = useRef(true);
 
-    // Save cart to localStorage whenever it changes
+    // 1. Sync State with LocalStorage whenever User changes (Login/Logout/Refresh)
     useEffect(() => {
-        localStorage.setItem('everbody_cart', JSON.stringify(cartItems));
-    }, [cartItems]);
+        // Wait for Auth to figure out who the user is
+        if (authLoading) return;
+
+        const currentUserId = user?.id || null;
+
+        // Avoid infinite loops: only load if the user actually switched
+        if (lastLoadedUserRef.current !== currentUserId) {
+            const key = getStorageKey(currentUserId);
+            const saved = localStorage.getItem(key);
+            try {
+                const parsed = saved ? JSON.parse(saved) : [];
+                setCartItems(Array.isArray(parsed) ? parsed : []);
+            } catch (e) {
+                setCartItems([]);
+            }
+            lastLoadedUserRef.current = currentUserId;
+        }
+    }, [user, authLoading]);
+
+    // 2. Persist State to LocalStorage whenever Cart changes
+    useEffect(() => {
+        // Don't save before we've had a chance to load the real data
+        if (authLoading || lastLoadedUserRef.current === undefined) return;
+
+        const currentUserId = user?.id || null;
+        const key = getStorageKey(currentUserId);
+        
+        localStorage.setItem(key, JSON.stringify(cartItems));
+    }, [cartItems, user, authLoading]);
 
     const addToCart = (product, quantity = 1, size = 'M') => {
         if (viewMode === 'seller' || viewMode === 'admin') {
-            setCartError("Operation Denied: Purchases are restricted while in Merchant or Admin mode. Please switch to Buyer view to shop.");
+            setCartError("Operation Denied: Purchases are restricted while in Merchant or Admin mode.");
             return false;
         }
 
@@ -52,19 +69,17 @@ export const CartProvider = ({ children }) => {
         setCartError(null);
         setCartSuccess(null);
 
-        // Pre-check for stock availability based on current cart state
         const existingInCart = cartItems.find(item => item.cartItemId === cartItemId);
         const currentQty = existingInCart ? existingInCart.quantity : 0;
-        
+
         if (currentQty + quantity > product.stock) {
-            setCartError(`Insufficient Stock: Cannot add more. Only ${product.stock} units in global inventory.`);
+            setCartError(`Only ${product.stock} units available.`);
             return false;
         }
 
         setCartItems(prevItems => {
             const existingItem = prevItems.find(item => item.cartItemId === cartItemId);
             if (existingItem) {
-                // We've already checked stock above, so we can safely update
                 return prevItems.map(item =>
                     item.cartItemId === cartItemId
                         ? { ...item, quantity: item.quantity + quantity }
@@ -74,7 +89,7 @@ export const CartProvider = ({ children }) => {
             return [...prevItems, { ...product, quantity, size, cartItemId }];
         });
 
-        setCartSuccess(`Success! "${product.name}" added to your secure cart.`);
+        setCartSuccess(`"${product.name}" added to cart!`);
         return true;
     };
 
@@ -83,53 +98,18 @@ export const CartProvider = ({ children }) => {
     };
 
     const updateQuantity = (cartItemId, quantity) => {
-        setCartError(null);
-        if (quantity <= 0) {
-            removeFromCart(cartItemId);
-            return;
-        }
         setCartItems(prevItems =>
             prevItems.map(item => {
                 if (item.cartItemId === cartItemId) {
-                    if (quantity > item.stock) {
-                        setCartError(`Only ${item.stock} units available in stock.`);
-                        return { ...item, quantity: item.stock };
-                    }
-                    return { ...item, quantity };
+                    const newQty = Math.max(0, Math.min(quantity, item.stock));
+                    return { ...item, quantity: newQty };
                 }
                 return item;
             })
         );
-        // Only set success if no error was set
-        if (!cartError) {
-             // We don't usually show success for just quantity updates in detail page, but could.
-             // For now, let's keep it simple for addToCart.
-        }
     };
 
-    const clearCartError = () => setCartError(null);
-    const clearCartSuccess = () => setCartSuccess(null);
-
-    const clearCart = () => {
-        setCartItems([]);
-        setAppliedCoupon(null);
-    };
-
-    const applyCoupon = (coupon) => {
-        setAppliedCoupon(coupon);
-    };
-
-    const removeCoupon = () => {
-        setAppliedCoupon(null);
-    };
-
-    const getCartTotal = () => {
-        return cartItems.reduce((total, item) => total + (parseFloat(item.price) * item.quantity), 0);
-    };
-
-    const getCartCount = () => {
-        return cartItems.reduce((count, item) => count + item.quantity, 0);
-    };
+    const clearCart = () => setCartItems([]);
 
     const value = {
         cartItems,
@@ -137,15 +117,12 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         updateQuantity,
         clearCart,
-        getCartTotal,
-        getCartCount,
+        getCartTotal: () => cartItems.reduce((t, i) => t + (parseFloat(i.price) * i.quantity), 0),
+        getCartCount: () => cartItems.reduce((c, i) => c + i.quantity, 0),
         cartError,
-        clearCartError,
+        clearCartError: () => setCartError(null),
         cartSuccess,
-        clearCartSuccess,
-        appliedCoupon,
-        applyCoupon,
-        removeCoupon
+        clearCartSuccess: () => setCartSuccess(null)
     };
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

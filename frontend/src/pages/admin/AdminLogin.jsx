@@ -51,7 +51,7 @@ const AdminLogin = () => {
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
                     <div>
                         <label className="block text-sm font-medium text-gray-400 mb-2">Email</label>
                         <input
@@ -60,6 +60,7 @@ const AdminLogin = () => {
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                             placeholder="admin@wearitnow.com"
+                            autoComplete="off"
                         />
                     </div>
                     <div>
@@ -70,6 +71,7 @@ const AdminLogin = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                             placeholder="••••••••"
+                            autoComplete="new-password"
                         />
                     </div>
                     <button
