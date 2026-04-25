@@ -51,6 +51,7 @@ composer.lock
 backend/composer.lock
 
 # Python specific (for the AI engine)
+ai_engine/
 __pycache__/
 *.py[cod]
 *$py.class
