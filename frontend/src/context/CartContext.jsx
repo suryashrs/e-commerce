@@ -59,6 +59,17 @@ export const CartProvider = ({ children }) => {
         localStorage.setItem(key, JSON.stringify(cartItems));
     }, [cartItems, user, authLoading]);
 
+    // 3. Clear Cart if redirected from a successful payment (e.g. eSewa)
+    useEffect(() => {
+        const queryParams = new URLSearchParams(window.location.search);
+        if (queryParams.get('payment') === 'success') {
+            clearCart();
+            // Remove the query param to avoid repeated clearing on refresh
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+        }
+    }, []);
+
     const addToCart = (product, quantity = 1, size = 'M') => {
         if (viewMode === 'seller' || viewMode === 'admin') {
             setCartError("Operation Denied: Purchases are restricted while in Merchant or Admin mode.");
@@ -109,7 +120,17 @@ export const CartProvider = ({ children }) => {
         );
     };
 
-    const clearCart = () => setCartItems([]);
+    const clearCart = () => {
+        setCartItems([]);
+        setAppliedCoupon(null);
+        setCartError(null);
+        setCartSuccess(null);
+        
+        // Explicitly clear localStorage to prevent race conditions on page reloads/redirects
+        const currentUserId = user?.id || null;
+        const key = getStorageKey(currentUserId);
+        localStorage.removeItem(key);
+    };
 
     const value = {
         cartItems,

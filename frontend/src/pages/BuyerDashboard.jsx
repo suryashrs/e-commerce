@@ -81,13 +81,17 @@ const BuyerDashboard = () => {
         // Handle eSewa success
         const params = new URLSearchParams(location.search);
         if (params.get('payment') === 'success') {
-            setCompletedOrderId(params.get('order_id'));
+            const orderId = params.get('order_id');
+            setCompletedOrderId(orderId);
             setPaymentSuccessModal(true);
+            
+            // Clear cart from context and storage
             clearCart();
-            // Clean up URL
+            
+            // Clean up URL to prevent repeated triggers
             navigate('/buyer', { replace: true });
         }
-    }, [location.pathname, location.search, navigate, clearCart]);
+    }, [location.pathname, location.search, navigate, clearCart, user]);
 
     if (!user) {
         return null; // Don't render until authentication redirects or user is loaded

@@ -1,52 +1,73 @@
-# Environment variables
+# Dependency directories
+node_modules/
+frontend/node_modules/
+backend/vendor/
+vendor/
+
+# Environment files
 .env
 .env.local
 .env.*.local
 
-# Node dependencies
-node_modules/
-npm-debug.log
-yarn-error.log
-package-lock.json
-yarn.lock
-
-# PHP dependencies
-vendor/
-composer.lock
-
 # Build outputs
 dist/
 build/
-
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# Frontend build
 frontend/dist/
 frontend/build/
-
-# Uploads (local files)
-backend/uploads/*
-!backend/uploads/.gitkeep
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-.Python
+*.exe
+*.dll
+*.so
+*.dylib
 
 # Logs
 *.log
-logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pip-log.txt
 
-# Temporary files
-*.tmp
-*.temp
+# IDE / Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# PHP specific
+composer.lock
+backend/composer.lock
+
+# Python specific (for the AI engine)
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+.venv/
+ai_engine/venv/
+ai_engine/__pycache__/
+ai_engine/*.pyc
+
+# Local Uploads (Don't sync user images)
+backend/uploads/*
+!backend/uploads/.gitkeep
+ai_engine/temp/
+
+# Misc
 .cache/
+.temp/
+*.tmp

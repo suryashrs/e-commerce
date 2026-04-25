@@ -49,13 +49,25 @@ const Navbar = () => {
     }
   }, [user]);
 
-  // Close menus on route change
+  // Close menus on route change and sync search query with URL
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setShowUserMenu(false);
     setShowNotifications(false);
     setShowMobileSearch(false);
-  }, [location.pathname]);
+
+    // Sync search bar with URL
+    const params = new URLSearchParams(location.search);
+    const searchParam = params.get("search");
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    } else {
+      // Only clear if we are not actively typing or if we've moved to a non-shop page
+      if (!location.pathname.includes('/shop')) {
+        setSearchQuery("");
+      }
+    }
+  }, [location.pathname, location.search]);
 
   const fetchNotifications = async () => {
     try {

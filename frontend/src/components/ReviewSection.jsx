@@ -11,19 +11,22 @@ const ReviewSection = ({ productId, userId, userName }) => {
     const [sort, setSort] = useState('latest');
     const [isWriting, setIsWriting] = useState(false);
     const [reviewToEdit, setReviewToEdit] = useState(null);
+    const [canReview, setCanReview] = useState(false);
     const [loading, setLoading] = useState(true);
 
     const fetchReviews = useCallback(async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/reviews/read.php?product_id=${productId}&sort=${sort}`);
+            const url = `${API_BASE_URL}/reviews/read.php?product_id=${productId}&sort=${sort}${userId ? `&user_id=${userId}` : ''}`;
+            const response = await axios.get(url);
             setReviews(response.data.records || []);
             setStats(response.data.stats || { avg_rating: 0, review_count: 0 });
+            setCanReview(response.data.can_review || false);
         } catch (error) {
             console.error('Error fetching reviews:', error);
         } finally {
             setLoading(false);
         }
-    }, [productId, sort]);
+    }, [productId, sort, userId]);
 
     useEffect(() => {
         fetchReviews();
@@ -69,17 +72,35 @@ const ReviewSection = ({ productId, userId, userName }) => {
                             </div>
                         </div>
 
-                        {!isWriting && !reviewToEdit && !hasUserReviewed && (
+                        {!isWriting && !reviewToEdit && (
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                                <h4 className="font-semibold text-gray-900 mb-2">Review this product</h4>
-                                <p className="text-sm text-gray-500 mb-4">Share your thoughts with other customers</p>
-                                <button
-                                    onClick={() => setIsWriting(true)}
-                                    className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-neutral-800 transition-all shadow-lg shadow-black/5"
-                                >
-                                    Write a Review
-                                </button>
-                                <p className="text-xs text-center text-gray-400 mt-2 italic">Only verified purchasers can submit a review</p>
+                                {hasUserReviewed ? (
+                                    <>
+                                        <h4 className="font-semibold text-gray-900 mb-2">You've reviewed this</h4>
+                                        <p className="text-sm text-gray-500">Thank you for your feedback!</p>
+                                    </>
+                                ) : canReview ? (
+                                    <>
+                                        <h4 className="font-semibold text-gray-900 mb-2">Review this product</h4>
+                                        <p className="text-sm text-gray-500 mb-4">Share your thoughts with other customers</p>
+                                        <button
+                                            onClick={() => setIsWriting(true)}
+                                            className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-neutral-800 transition-all shadow-lg shadow-black/5"
+                                        >
+                                            Write a Review
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h4 className="font-semibold text-gray-400 mb-2">Review Restricted</h4>
+                                        <p className="text-xs text-gray-400 italic">
+                                            Only verified purchasers of this item can submit a review.
+                                        </p>
+                                        {!userId && (
+                                            <p className="text-[10px] text-gray-400 mt-2">Please log in to check your eligibility.</p>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         )}
 

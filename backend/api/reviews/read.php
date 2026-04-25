@@ -16,14 +16,21 @@ $review = new Review($db);
 
 $product_id = isset($_GET['product_id']) ? $_GET['product_id'] : die();
 $sort = isset($_GET['sort']) ? $_GET['sort'] : 'latest';
+$user_id = isset($_GET['user_id']) ? $_GET['user_id'] : null;
 
 $stmt = $review->readByProduct($product_id, $sort);
 $num = $stmt->rowCount();
+
+$can_review = false;
+if ($user_id) {
+    $can_review = $review->hasPurchased($user_id, $product_id);
+}
 
 if($num > 0){
     $reviews_arr = array();
     $reviews_arr["records"] = array();
     $reviews_arr["stats"] = $review->getAverageRating($product_id);
+    $reviews_arr["can_review"] = $can_review;
 
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)){
         extract($row);
@@ -45,6 +52,6 @@ if($num > 0){
     echo json_encode($reviews_arr);
 } else {
     http_response_code(200); // Return empty array instead of 404 for easier frontend handling
-    echo json_encode(array("records" => [], "stats" => ["avg_rating" => 0, "review_count" => 0]));
+    echo json_encode(array("records" => [], "stats" => ["avg_rating" => 0, "review_count" => 0], "can_review" => $can_review));
 }
 ?>

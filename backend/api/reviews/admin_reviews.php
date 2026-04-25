@@ -1,8 +1,13 @@
 <?php
 // backend/api/reviews/admin_reviews.php
-include_once '../../config/cors.php';
-include_once '../../src/Config/Database.php';
-include_once '../../src/Models/Review.php';
+include_once __DIR__ . '/../../config/cors.php';
+
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
+include_once __DIR__ . '/../../src/Config/Database.php';
+include_once __DIR__ . '/../../src/Models/Review.php';
 
 $database = new Database();
 $db = $database->getConnection();

@@ -170,8 +170,8 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview"); // overview | sellers | products
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
+  const fetchAll = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [statsRes, analyticsRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/admin/stats.php`),
@@ -187,11 +187,20 @@ const AdminDashboard = () => {
     } catch (err) {
       console.error("Failed to fetch data:", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { 
+    fetchAll(); // Initial load (with spinner)
+    
+    // Set up real-time polling every 30 seconds
+    const interval = setInterval(() => {
+      fetchAll(true); // Background refresh (no spinner)
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchAll]);
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">

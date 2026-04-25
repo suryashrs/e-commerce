@@ -4,7 +4,7 @@ import axios from 'axios';
 import { API_BASE_URL } from '../config';
 
 const ReviewForm = ({ productId, userId, reviewToEdit = null, onSuccess, onCancel }) => {
-    const [rating, setRating] = useState(reviewToEdit ? reviewToEdit.rating : 5); // Default to 5 stars
+    const [rating, setRating] = useState(reviewToEdit ? reviewToEdit.rating : 0); // Default to 0 stars (empty)
     const [comment, setComment] = useState(reviewToEdit ? reviewToEdit.comment : '');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');

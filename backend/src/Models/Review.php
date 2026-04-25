@@ -23,7 +23,8 @@ class Review {
                   FROM orders o 
                   JOIN order_items oi ON o.id = oi.order_id 
                   WHERE o.user_id = :user_id 
-                  AND oi.product_id = :product_id"; // Removed status check for easier testing
+                  AND oi.product_id = :product_id 
+                  AND o.status IN ('delivered', 'completed', 'pending', 'shipped')"; 
         
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':user_id', $user_id);
@@ -62,6 +63,46 @@ class Review {
         $stmt->bindParam(":comment", $this->comment);
 
         if($stmt->execute()){
+            // Create Notifications
+            try {
+                include_once 'Notification.php';
+                $notif = new Notification($this->conn);
+                
+                // 1. Get Product info (name and seller_id)
+                $p_query = "SELECT name, seller_id FROM products WHERE id = :pid";
+                $p_stmt = $this->conn->prepare($p_query);
+                $p_stmt->bindParam(":pid", $this->product_id);
+                $p_stmt->execute();
+                $product_info = $p_stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($product_info) {
+                    $p_name = $product_info['name'];
+                    $seller_id = $product_info['seller_id'];
+
+                    // 2. Notify Seller
+                    $notif->user_id = $seller_id;
+                    $notif->related_id = $this->product_id;
+                    $notif->type = 'NEW_REVIEW';
+                    $notif->message = "New {$this->rating}-star review for your product: {$p_name}";
+                    $notif->is_read = false;
+                    $notif->create();
+
+                    // 3. Notify Admins
+                    $admin_query = "SELECT id FROM users WHERE role = 'admin'";
+                    $admin_stmt = $this->conn->prepare($admin_query);
+                    $admin_stmt->execute();
+                    
+                    while ($admin = $admin_stmt->fetch(PDO::FETCH_ASSOC)) {
+                        $notif->user_id = $admin['id'];
+                        $notif->message = "New product review for '{$p_name}' by User ID: {$this->user_id}";
+                        $notif->create();
+                    }
+                }
+            } catch (Exception $e) {
+                // Log error but don't fail the review creation
+                error_log("Notification Error: " . $e->getMessage());
+            }
+            
             return true;
         }
         return false;
