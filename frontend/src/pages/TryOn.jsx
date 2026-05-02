@@ -2,83 +2,30 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { fetchProducts } from "../services/api";
 import ArCamera from "../components/ArCamera";
+import Webcam from "react-webcam";
 
-// ─── AI Try-On helper (uses Gradio client, loaded lazily) ───────────────────
-async function runAITryOn(personFile, garmentFile, onStatus) {
-  onStatus("Connecting to AI server...");
-  const { Client } = await import("@gradio/client");
-  const HF_TOKEN = import.meta.env.VITE_HF_TOKEN;
-  if (!HF_TOKEN) {
-    throw new Error("Missing Hugging Face token. Set VITE_HF_TOKEN in your environment.");
-  }
-
-  // Try backup first (more stable), fall back to original
-  const spaces = [
-    "yisol/IDM-VTON",                      // Primary — GPU, fastest
-    "Kwai-Kolors/Kolors-Virtual-Try-On",   // Fallback — CPU, always running
-  ];
-
-  let lastErr;
-  for (const spaceId of spaces) {
-    try {
-      onStatus(`Connecting to ${spaceId}...`);
-      const client = await Client.connect(spaceId, { hf_token: HF_TOKEN });
-
-      onStatus("Uploading images & generating fit...");
-      const result = await client.predict("/tryon", [
-        { background: personFile, layers: [], composite: null },
-        garmentFile,
-        "garment",
-        true,
-        false,
-        30,
-        42,
-      ]);
-
-      const out = result?.data?.[0];
-      const url = typeof out === "string" ? out : out?.url || out?.name;
-      if (url) return url;
-      throw new Error("Empty response");
-    } catch (err) {
-      console.warn(`${spaceId} failed:`, err);
-      lastErr = err;
-    }
-  }
-  throw lastErr;
-}
-
-// ─── Main Component ──────────────────────────────────────────────────────────
 const TryOn = () => {
-  // ── original state ──
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [userImage, setUserImage] = useState(null);
-  const [mode, setMode] = useState("photo"); // 'photo' | 'ar' | 'ai'
+  const [mode, setMode] = useState("photo"); // 'photo' | 'smart_try' | 'ar'
   const [products, setProducts] = useState([]);
   const [productScale, setProductScale] = useState(0.35);
   const [productPositionY, setProductPositionY] = useState(0.3);
   const [productPositionX, setProductPositionX] = useState(0.5);
   const [opacity, setOpacity] = useState(0.95);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
-
-  // ── AI tab state ──
-  const [aiPersonFile, setAiPersonFile] = useState(null);
-  const [aiPersonPreview, setAiPersonPreview] = useState(null);
-  const [aiGarmentFile, setAiGarmentFile] = useState(null);
-  const [aiGarmentPreview, setAiGarmentPreview] = useState(null);
-  const [aiCatalogProduct, setAiCatalogProduct] = useState(null);
-  const [aiResult, setAiResult] = useState(null);
-  const [aiStatus, setAiStatus] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState("");
-  const aiPersonRef = useRef(null);
-  const aiGarmentRef = useRef(null);
+  const webcamRef = useRef(null);
 
   useEffect(() => {
     const loadProducts = async () => {
       try {
         const data = await fetchProducts();
-        setProducts(data.filter((p) => p.has_tryon == 1 || p.has_tryon === true));
+        const filteredData = data.filter(p => p.has_tryon == 1 || p.has_tryon === true || p.has_tryon === '1');
+        setProducts(filteredData);
       } catch (error) {
         console.error("Failed to load products", error);
       }
@@ -87,56 +34,89 @@ const TryOn = () => {
   }, []);
 
   useEffect(() => {
-    if (userImage && selectedProduct) drawCanvas(userImage, selectedProduct);
-  }, [productScale, productPositionY, productPositionX, opacity]);
+    if (userImage) {
+      drawCanvas(userImage, selectedProduct);
+    }
+  }, [userImage, selectedProduct, productScale, productPositionY, productPositionX, opacity]);
 
-  // ── original handlers ──
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          setUserImage(img);
+          setGeneratedImage(null);
+          if (selectedProduct) {
+            drawCanvas(img, selectedProduct);
+          }
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCapture = () => {
+    const imageSrc = webcamRef.current.getScreenshot();
+    if (imageSrc) {
       const img = new Image();
       img.onload = () => {
         setUserImage(img);
-        if (selectedProduct) drawCanvas(img, selectedProduct);
+        setGeneratedImage(null);
+        setIsCameraActive(false);
+        if (selectedProduct) {
+          drawCanvas(img, selectedProduct);
+        }
       };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
+      img.src = imageSrc;
+    }
   };
 
   const handleProductSelect = (product) => {
     setSelectedProduct(product);
-    if (userImage) drawCanvas(userImage, product);
+    setGeneratedImage(null);
+    if (userImage) {
+      drawCanvas(userImage, product);
+    }
   };
 
   const drawCanvas = (bgImage, product) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const ctx = canvas.getContext("2d");
+
+    // Set canvas dimensions (max width 700 for display)
     const scale = Math.min(700 / bgImage.width, 600 / bgImage.height, 1);
     canvas.width = bgImage.width * scale;
     canvas.height = bgImage.height * scale;
+
+    // Draw user image
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
-    const tryOnUrl =
-      product.try_on_image_url && product.try_on_image_url.trim() !== ""
-        ? product.try_on_image_url
-        : product.image_url;
-    if (product && tryOnUrl) {
-      const productImg = new Image();
-      productImg.crossOrigin = "Anonymous";
-      productImg.onload = () => {
-        ctx.globalAlpha = opacity;
-        const pWidth = canvas.width * productScale;
-        const pHeight = (productImg.height / productImg.width) * pWidth;
-        const x = canvas.width * productPositionX - pWidth / 2;
-        const y = canvas.height * productPositionY - pHeight / 2;
-        ctx.drawImage(productImg, x, y, pWidth, pHeight);
-        ctx.globalAlpha = 1.0;
-      };
-      productImg.src = tryOnUrl;
+
+    // Draw product overlay if selected
+    if (product) {
+      const tryOnUrl = product.try_on_image_url && product.try_on_image_url.trim() !== "" ? product.try_on_image_url : product.image_url;
+      if (tryOnUrl) {
+        const productImg = new Image();
+        productImg.crossOrigin = "Anonymous";
+        productImg.onload = () => {
+          ctx.globalAlpha = opacity;
+          const pWidth = canvas.width * productScale;
+          const pHeight = (productImg.height / productImg.width) * pWidth;
+          const x = canvas.width * productPositionX - pWidth / 2;
+          const y = canvas.height * productPositionY - pHeight / 2;
+          ctx.drawImage(productImg, x, y, pWidth, pHeight);
+          ctx.globalAlpha = 1.0;
+        };
+        productImg.onerror = (e) => {
+          console.error("Failed to load product overlay image in Studio:", tryOnUrl, e);
+        };
+        productImg.src = tryOnUrl;
+      }
     }
   };
 
@@ -157,71 +137,37 @@ const TryOn = () => {
     setOpacity(0.95);
   };
 
-  // ── AI tab handlers ──
-  const handleAiPerson = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setAiPersonFile(file);
-    setAiPersonPreview(URL.createObjectURL(file));
-    setAiResult(null);
-    setAiError("");
-  };
-
-  const handleAiGarment = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setAiGarmentFile(file);
-    setAiGarmentPreview(URL.createObjectURL(file));
-    setAiCatalogProduct(null);
-    setAiResult(null);
-    setAiError("");
-  };
-
-  const handleAiCatalogPick = async (product) => {
-    setAiCatalogProduct(product);
-    setAiGarmentFile(null);
-    setAiGarmentPreview(null);
-    setAiResult(null);
-    setAiError("");
-    // Pre-fetch so we have a File object ready
+  const generateSmartTry = async () => {
+    if (!userImage || !selectedProduct) return;
+    
+    setIsGenerating(true);
+    setGeneratedImage(null);
     try {
-      const url = product.try_on_image_url || product.image_url;
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const f = new File([blob], "garment.jpg", { type: blob.type });
-      setAiGarmentFile(f);
-      setAiGarmentPreview(url);
-    } catch {
-      setAiError("Could not load garment image from catalog.");
-    }
-  };
+      const response = await fetch("http://localhost/e-commerce/backend/api/vertex_tryon.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          person_image: userImage.src,
+          garment_image: selectedProduct.image_url
+        })
+      });
 
-  const handleGenerate = async () => {
-    if (!aiPersonFile) { setAiError("Upload your photo first."); return; }
-    if (!aiGarmentFile) { setAiError("Select or upload a garment."); return; }
-    setAiLoading(true);
-    setAiError("");
-    setAiResult(null);
-    try {
-      const url = await runAITryOn(aiPersonFile, aiGarmentFile, setAiStatus);
-      setAiResult(url);
-      setAiStatus("");
-    } catch (err) {
-      setAiError("AI servers are currently busy. Please try again in a moment.");
-      setAiStatus("");
+      const data = await response.json();
+      if (data.success && data.image_url) {
+        setGeneratedImage(data.image_url);
+      } else {
+        alert("Failed to generate: " + (data.error || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error generating try-on:", error);
+      alert("Error generating try-on. Please check your backend connection.");
     } finally {
-      setAiLoading(false);
+      setIsGenerating(false);
     }
   };
 
-  const downloadAiResult = () => {
-    const a = document.createElement("a");
-    a.href = aiResult;
-    a.download = "ai-tryon-result.jpg";
-    a.click();
-  };
-
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-7xl mx-auto">
       <div className="text-center mb-8 px-4">
@@ -236,162 +182,183 @@ const TryOn = () => {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left Panel - Controls */}
         <div className="w-full lg:w-1/3 space-y-6">
-
-          {/* Mode Selection – now 3 tabs */}
-          <div className="bg-white p-2 rounded-2xl shadow-lg border-2 border-gray-300 flex gap-1">
+          {/* Mode Selection */}
+          <div className="bg-white p-2 rounded-2xl shadow-lg border-2 border-gray-300 flex flex-wrap gap-2">
             <button
               onClick={() => setMode("photo")}
-              className={`flex-1 py-3 rounded-xl font-bold transition text-sm flex justify-center items-center gap-1 shadow-sm ${mode === "photo" ? "bg-black text-white" : "bg-transparent text-gray-500 hover:text-black"}`}
+              className={`flex-1 py-3 rounded-xl font-bold transition flex justify-center items-center gap-2 shadow-sm ${mode === "photo" ? "bg-black text-white" : "bg-transparent text-gray-500 hover:text-black"}`}
             >
               📸 Photo
             </button>
             <button
-              onClick={() => setMode("ar")}
-              className={`flex-1 py-3 rounded-xl font-bold transition text-sm flex items-center justify-center gap-1 shadow-sm ${mode === "ar" ? "bg-purple-600 text-white" : "bg-transparent text-gray-500 hover:text-purple-600"}`}
+              onClick={() => setMode("smart_try")}
+              className={`flex-1 py-3 rounded-xl font-bold transition flex justify-center items-center gap-2 shadow-sm ${mode === "smart_try" ? "bg-blue-600 text-white" : "bg-transparent text-gray-500 hover:text-blue-600"}`}
             >
-              🕶️ Live AR
+              ✨ Smart Try
             </button>
             <button
-              onClick={() => setMode("ai")}
-              className={`flex-1 py-3 rounded-xl font-bold transition text-sm flex items-center justify-center gap-1 shadow-sm ${mode === "ai" ? "bg-indigo-600 text-white" : "bg-transparent text-gray-500 hover:text-indigo-600"}`}
+              onClick={() => setMode("ar")}
+              className={`flex-1 py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-sm ${mode === "ar" ? "bg-purple-600 text-white" : "bg-transparent text-gray-500 hover:text-purple-600"}`}
             >
-              🤖 Smart Fit
+              <span className="text-xl">🕶️</span> Live AR
             </button>
           </div>
 
-          {/* ── ORIGINAL PHOTO MODE controls ── */}
-          {mode === "photo" && (
+          {/* Upload Photo (Only in Photo & Smart Try Mode) */}
+          {(mode === "photo" || mode === "smart_try") && (
             <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-300">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <span className="bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">1</span>
+                <span className="bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">
+                  1
+                </span>
                 Upload Your Photo
               </h2>
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full bg-black text-white py-3 px-4 rounded-xl font-semibold hover:bg-gray-800 transition shadow-md"
-              >
-                {userImage ? "📸 Change Photo" : "📸 Upload Photo"}
-              </button>
-              <p className="text-xs text-gray-500 mt-2">Best results with full-body photos</p>
-            </div>
-          )}
-
-          {/* ── ORIGINAL Select Product (photo + ar modes) ── */}
-          {mode !== "ai" && (
-            <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-300">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <span className="bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">2</span>
-                Select Product
-              </h2>
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-2 gap-3 max-h-96 overflow-y-auto custom-scrollbar p-1">
-                {products.map((p) => (
-                  <div
-                    key={p.id}
-                    onClick={() => handleProductSelect(p)}
-                    className={`cursor-pointer border-2 rounded-xl p-2 transition-all transform hover:scale-105 ${selectedProduct?.id === p.id ? "border-black ring-2 ring-gray-100 shadow-lg" : "border-gray-100 hover:border-gray-400"}`}
-                  >
-                    <img src={p.image_url} alt={p.name} className="w-full h-20 sm:h-24 lg:h-28 object-cover rounded-lg mb-2" />
-                    <p className="text-[10px] font-bold truncate">{p.name}</p>
-                    <p className="text-[10px] text-gray-900 font-black">Rs {p.price}</p>
-                  </div>
-                ))}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <div className="flex gap-2 mb-2">
+                <button
+                  onClick={() => {
+                    fileInputRef.current?.click();
+                    setIsCameraActive(false);
+                  }}
+                  className="flex-1 bg-black text-white py-3 px-4 rounded-xl font-semibold hover:bg-gray-800 transition shadow-md flex items-center justify-center gap-2"
+                >
+                  📁 Upload
+                </button>
+                <button
+                  onClick={() => setIsCameraActive(!isCameraActive)}
+                  className={`flex-1 py-3 px-4 rounded-xl font-semibold transition shadow-md flex items-center justify-center gap-2 ${isCameraActive ? "bg-red-500 text-white" : "bg-gray-100 text-black hover:bg-gray-200"}`}
+                >
+                  {isCameraActive ? "❌ Close" : "📸 Camera"}
+                </button>
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Best results with full-body photos
+              </p>
             </div>
           )}
 
-          {/* ── ORIGINAL Adjustment Controls ── */}
+          {/* Select Product */}
+          <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-300">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <span className="bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">
+                2
+              </span>
+              Select Product
+            </h2>
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-2 gap-3 max-h-96 overflow-y-auto custom-scrollbar p-1">
+              {products.map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => handleProductSelect(p)}
+                  className={`cursor-pointer border-2 rounded-xl p-2 transition-all transform hover:scale-105 ${selectedProduct?.id == p.id
+                    ? "border-black ring-2 ring-gray-100 shadow-lg"
+                    : "border-gray-100 hover:border-gray-400"
+                    }`}
+                >
+                  <img
+                    src={p.image_url}
+                    alt={p.name}
+                    className="w-full h-20 sm:h-24 lg:h-28 object-cover rounded-lg mb-2"
+                  />
+                  <p className="text-[10px] font-bold truncate">{p.name}</p>
+                  <p className="text-[10px] text-gray-900 font-black">
+                    Rs {p.price}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Adjustment Controls */}
           {mode === "photo" && userImage && selectedProduct && (
             <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-300">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <span className="bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">3</span>
+                <span className="bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">
+                  3
+                </span>
                 Adjust Position
               </h2>
+
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Size: {Math.round(productScale * 100)}%</label>
-                  <input type="range" min="0.1" max="0.8" step="0.05" value={productScale} onChange={(e) => setProductScale(parseFloat(e.target.value))} className="w-full accent-black" />
+                  <label className="block text-sm font-semibold mb-2">
+                    Size: {Math.round(productScale * 100)}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="0.8"
+                    step="0.05"
+                    value={productScale}
+                    onChange={(e) =>
+                      setProductScale(parseFloat(e.target.value))
+                    }
+                    className="w-full accent-black"
+                  />
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Vertical Position</label>
-                  <input type="range" min="0" max="1" step="0.01" value={productPositionY} onChange={(e) => setProductPositionY(parseFloat(e.target.value))} className="w-full accent-purple-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Horizontal Position</label>
-                  <input type="range" min="0" max="1" step="0.01" value={productPositionX} onChange={(e) => setProductPositionX(parseFloat(e.target.value))} className="w-full accent-purple-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Opacity: {Math.round(opacity * 100)}%</label>
-                  <input type="range" min="0.1" max="1" step="0.05" value={opacity} onChange={(e) => setOpacity(parseFloat(e.target.value))} className="w-full accent-purple-500" />
-                </div>
-                <button onClick={resetControls} className="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition font-semibold">Reset Controls</button>
-              </div>
-            </div>
-          )}
 
-          {/* ── AI TAB: left panel controls ── */}
-          {mode === "ai" && (
-            <div className="space-y-4">
-              {/* Step 1 – Person photo */}
-              <div className="bg-white p-5 rounded-2xl shadow-lg border-2 border-gray-300">
-                <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-                  <span className="bg-indigo-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs">1</span>
-                  Your Photo
-                </h2>
-                <input ref={aiPersonRef} type="file" accept="image/*" onChange={handleAiPerson} className="hidden" />
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Vertical Position
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={productPositionY}
+                    onChange={(e) =>
+                      setProductPositionY(parseFloat(e.target.value))
+                    }
+                    className="w-full accent-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Horizontal Position
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={productPositionX}
+                    onChange={(e) =>
+                      setProductPositionX(parseFloat(e.target.value))
+                    }
+                    className="w-full accent-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Opacity: {Math.round(opacity * 100)}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1"
+                    step="0.05"
+                    value={opacity}
+                    onChange={(e) => setOpacity(parseFloat(e.target.value))}
+                    className="w-full accent-purple-500"
+                  />
+                </div>
+
                 <button
-                  onClick={() => aiPersonRef.current?.click()}
-                  className={`w-full border-2 border-dashed rounded-xl p-3 text-center transition font-semibold text-sm ${aiPersonPreview ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-gray-300 hover:border-indigo-400 text-gray-500"}`}
+                  onClick={resetControls}
+                  className="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition font-semibold"
                 >
-                  {aiPersonPreview
-                    ? <img src={aiPersonPreview} className="mx-auto max-h-36 rounded-lg object-contain" />
-                    : "📸 Upload full-body photo"}
+                  Reset Controls
                 </button>
               </div>
-
-              {/* Step 2 – Garment: catalog or upload */}
-              <div className="bg-white p-5 rounded-2xl shadow-lg border-2 border-gray-300">
-                <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-                  <span className="bg-indigo-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs">2</span>
-                  Choose Garment
-                </h2>
-                <input ref={aiGarmentRef} type="file" accept="image/*" onChange={handleAiGarment} className="hidden" />
-                <button
-                  onClick={() => aiGarmentRef.current?.click()}
-                  className={`w-full border-2 border-dashed rounded-xl p-3 text-center transition font-semibold text-sm mb-3 ${aiGarmentPreview && !aiCatalogProduct ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-gray-300 hover:border-indigo-400 text-gray-500"}`}
-                >
-                  {aiGarmentPreview && !aiCatalogProduct
-                    ? <img src={aiGarmentPreview} className="mx-auto max-h-28 rounded-lg object-contain" />
-                    : "👕 Upload garment image"}
-                </button>
-                <p className="text-center text-xs text-gray-400 font-semibold mb-3">— or pick from catalog —</p>
-                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
-                  {products.map((p) => (
-                    <div
-                      key={p.id}
-                      onClick={() => handleAiCatalogPick(p)}
-                      className={`cursor-pointer border-2 rounded-xl p-1 transition-all ${aiCatalogProduct?.id === p.id ? "border-indigo-500 ring-2 ring-indigo-100" : "border-gray-100 hover:border-indigo-300"}`}
-                    >
-                      <img src={p.image_url} alt={p.name} className="w-full h-16 object-cover rounded-lg" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Generate button */}
-              <button
-                onClick={handleGenerate}
-                disabled={aiLoading || !aiPersonFile || !aiGarmentFile}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-black text-lg transition shadow-lg"
-              >
-                {aiLoading ? "⏳ Generating..." : "✨ Generate AI Try-On"}
-              </button>
-
-              {aiError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm font-semibold">
-                  ⚠️ {aiError}
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -400,77 +367,155 @@ const TryOn = () => {
         <div className="w-full lg:w-2/3">
           {mode === "ar" ? (
             <ArCamera selectedProduct={selectedProduct} />
-          ) : mode === "photo" ? (
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-300 min-h-[600px] flex flex-col">
-              <div className="flex-grow flex items-center justify-center">
-                {userImage ? (
-                  <canvas ref={canvasRef} className="max-w-full rounded-xl shadow-2xl" />
+          ) : mode === "smart_try" ? (
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-6 border-2 border-blue-200 min-h-[600px] flex flex-col">
+              <div className="flex-grow flex flex-col items-center justify-center">
+                {isCameraActive ? (
+                  <div className="text-center flex flex-col items-center w-full max-w-lg">
+                    <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl mb-6 bg-black aspect-video flex items-center justify-center">
+                      <Webcam
+                        ref={webcamRef}
+                        screenshotFormat="image/jpeg"
+                        className="w-full h-full object-cover"
+                        mirrored={true}
+                      />
+                      <div className="absolute inset-0 border-4 border-blue-500/30 pointer-events-none rounded-2xl"></div>
+                    </div>
+                    <button
+                      onClick={handleCapture}
+                      className="bg-blue-600 text-white py-4 px-12 rounded-full font-black text-xl hover:bg-blue-700 transition shadow-2xl transform hover:scale-105 flex items-center gap-3"
+                    >
+                      <span className="text-3xl">📸</span> CAPTURE PHOTO
+                    </button>
+                    <p className="text-gray-500 mt-4 text-sm font-medium">Position yourself clearly in the frame</p>
+                  </div>
+                ) : !userImage ? (
+                   <div className="text-center text-gray-400">
+                    <div className="text-6xl mb-4">✨</div>
+                    <p className="text-xl font-semibold mb-2 text-gray-700">
+                      Vertex AI Smart Try
+                    </p>
+                    <p className="text-sm">
+                      Upload your photo or use camera to get started!
+                    </p>
+                  </div>
+                ) : !selectedProduct ? (
+                  <div className="text-center">
+                    <img src={userImage.src} className="max-h-[400px] w-auto rounded-2xl shadow-2xl border-8 border-white mx-auto mb-6" alt="User" />
+                    <div className="bg-blue-600 text-white px-6 py-3 rounded-full font-bold inline-block animate-bounce shadow-lg">
+                      ⬅️ Now Select a Product to Try On!
+                    </div>
+                  </div>
+                ) : isGenerating ? (
+                  <div className="text-center flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+                    <p className="text-lg font-bold text-blue-800 animate-pulse">Generating with Google Vertex AI...</p>
+                    <p className="text-sm text-gray-600 mt-2">This may take a few seconds</p>
+                  </div>
+                ) : generatedImage ? (
+                  <img src={generatedImage} alt="Generated Try-On" className="max-w-full rounded-xl shadow-2xl max-h-[600px] object-contain" />
                 ) : (
-                  <div className="text-center text-gray-400">
-                    <div className="text-6xl mb-4">👗</div>
-                    <p className="text-xl font-semibold mb-2">Upload a Photo to Get Started</p>
-                    <p className="text-sm">Choose your favorite product and see how it looks on you!</p>
+                  <div className="text-center">
+                    <div className="flex gap-6 justify-center items-center mb-8">
+                       {userImage ? (
+                         <img src={userImage.src} className="h-48 w-auto rounded-xl shadow-lg object-cover border-4 border-white" alt="User" />
+                       ) : (
+                         <div className="h-48 w-48 rounded-xl bg-white border-4 border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-4xl">
+                           👤
+                         </div>
+                       )}
+                       <span className="text-4xl text-blue-500">➕</span>
+                       <img src={selectedProduct.image_url} className="h-48 w-auto rounded-xl shadow-lg object-cover border-4 border-white bg-white p-2" alt="Product" />
+                    </div>
+                    <button
+                      onClick={generateSmartTry}
+                      disabled={!userImage}
+                      className={`bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-8 rounded-xl font-bold text-lg transition shadow-xl transform hover:scale-105 ${!userImage ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:from-blue-700 hover:to-indigo-700'}`}
+                    >
+                      ✨ {userImage ? "Generate Smart Try" : "Upload Photo to Generate"}
+                    </button>
                   </div>
                 )}
               </div>
-              {userImage && selectedProduct && (
-                <div className="mt-6 flex gap-4">
-                  <button onClick={downloadImage} className="flex-1 bg-black text-white py-3 px-6 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg">
-                    💾 Download Image
+
+              {generatedImage && !isGenerating && (
+                <div className="mt-6 flex flex-col sm:flex-row gap-4">
+                  <a
+                    href={generatedImage}
+                    download="vertex-tryon.png"
+                    className="flex-1 bg-black text-white py-3 px-6 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg text-center flex items-center justify-center gap-2"
+                  >
+                    💾 Download Result
+                  </a>
+                  <button
+                    onClick={() => setGeneratedImage(null)}
+                    className="flex-1 bg-white text-black py-3 px-6 rounded-xl font-bold hover:bg-gray-100 transition shadow-lg text-center border-2 border-black flex items-center justify-center gap-2"
+                  >
+                    🔄 Try Another
                   </button>
-                  <Link to={`/product/${selectedProduct.id}`} className="flex-1 bg-white text-black py-3 px-6 rounded-xl font-bold hover:bg-gray-100 transition shadow-lg text-center border-2 border-black">
+                  <Link
+                    to={`/product/${selectedProduct.id}`}
+                    className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg text-center border-2 border-blue-600 flex items-center justify-center gap-2"
+                  >
                     🛒 Buy This Item
                   </Link>
                 </div>
               )}
             </div>
           ) : (
-            /* ── AI TAB: right side result panel ── */
-            <div className="bg-gradient-to-br from-indigo-50 to-slate-100 rounded-2xl border-2 border-indigo-200 min-h-[600px] flex flex-col items-center justify-center p-6">
-              {aiLoading ? (
-                <div className="text-center">
-                  <div className="relative w-24 h-24 mx-auto mb-6">
-                    <div className="absolute inset-0 border-4 border-indigo-200 rounded-full" />
-                    <div className="absolute inset-0 border-4 border-t-indigo-600 rounded-full animate-spin" />
-                    <span className="absolute inset-0 flex items-center justify-center text-3xl">🤖</span>
-                  </div>
-                  <p className="text-indigo-700 font-black text-lg mb-2">AI is working its magic...</p>
-                  <p className="text-indigo-500 text-sm font-semibold">{aiStatus}</p>
-                  <p className="text-gray-400 text-xs mt-3">Usually takes 20–40 seconds</p>
-                </div>
-              ) : aiResult ? (
-                <div className="flex flex-col items-center gap-6 w-full">
-                  <div className="relative group">
-                    <img
-                      src={aiResult}
-                      alt="AI Try-On Result"
-                      className="max-h-[520px] rounded-2xl shadow-2xl border-4 border-white object-contain"
-                    />
-                    <div className="absolute top-3 right-3 bg-green-500 text-white text-xs font-black px-3 py-1 rounded-full shadow">
-                      ✓ AI Generated
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-300 min-h-[600px] flex flex-col">
+              <div className="flex-grow flex items-center justify-center">
+                {isCameraActive ? (
+                  <div className="text-center flex flex-col items-center w-full max-w-lg">
+                    <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl mb-6 bg-black aspect-video flex items-center justify-center">
+                      <Webcam
+                        ref={webcamRef}
+                        screenshotFormat="image/jpeg"
+                        className="w-full h-full object-cover"
+                        mirrored={true}
+                      />
+                      <div className="absolute inset-0 border-4 border-blue-500/30 pointer-events-none rounded-2xl"></div>
                     </div>
-                  </div>
-                  <div className="flex gap-4 w-full max-w-sm">
-                    <button onClick={downloadAiResult} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow">
-                      💾 Save
+                    <button
+                      onClick={handleCapture}
+                      className="bg-black text-white py-4 px-12 rounded-full font-black text-xl hover:bg-gray-800 transition shadow-2xl transform hover:scale-105 flex items-center gap-3"
+                    >
+                      <span className="text-3xl">📸</span> CAPTURE PHOTO
                     </button>
-                    <button onClick={() => { setAiResult(null); setAiError(""); }} className="flex-1 bg-white text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-100 transition shadow border border-gray-200">
-                      🔄 Try Again
-                    </button>
+                    <p className="text-gray-500 mt-4 text-sm font-medium">Position yourself clearly in the frame</p>
                   </div>
-                  {aiCatalogProduct && (
-                    <Link to={`/product/${aiCatalogProduct.id}`} className="bg-black text-white py-3 px-8 rounded-xl font-bold hover:bg-gray-900 transition shadow text-center w-full max-w-sm">
-                      🛒 Buy This Item
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center text-gray-400 max-w-sm">
-                  <div className="text-7xl mb-6">🤖</div>
-                  <p className="text-xl font-bold text-gray-600 mb-2">AI Virtual Try-On</p>
-                  <p className="text-sm leading-relaxed">
-                    Upload your photo + a garment, then hit <strong className="text-indigo-600">Generate</strong>. The AI will create a photorealistic try-on in seconds.
-                  </p>
+                ) : userImage ? (
+                  <canvas
+                    ref={canvasRef}
+                    className="max-w-full rounded-xl shadow-2xl"
+                  />
+                ) : (
+                  <div className="text-center text-gray-400">
+                    <div className="text-6xl mb-4">👗</div>
+                    <p className="text-xl font-semibold mb-2">
+                      Upload a Photo to Get Started
+                    </p>
+                    <p className="text-sm">
+                      Choose your favorite product and see how it looks on you!
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {userImage && selectedProduct && (
+                <div className="mt-6 flex gap-4">
+                  <button
+                    onClick={downloadImage}
+                    className="flex-1 bg-black text-white py-3 px-6 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg"
+                  >
+                    💾 Download Image
+                  </button>
+                  <Link
+                    to={`/product/${selectedProduct.id}`}
+                    className="flex-1 bg-white text-black py-3 px-6 rounded-xl font-bold hover:bg-gray-100 transition shadow-lg text-center border-2 border-black"
+                  >
+                    🛒 Buy This Item
+                  </Link>
                 </div>
               )}
             </div>

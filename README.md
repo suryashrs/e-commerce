@@ -9,6 +9,7 @@ This e-commerce platform provides:
 - **Seller Features**: Product management, inventory, order fulfillment, revenue analytics
 - **Admin Features**: User management, seller approval, order analytics, coupon management
 - **Notifications & Loyalty**: Real-time notifications, loyalty points system
+- **AI Virtual Try-On**: Realistic garment try-on powered by Google Vertex AI (virtual-try-on-001)
 
 ## Tech Stack
 
@@ -24,6 +25,7 @@ This e-commerce platform provides:
 - **Database**: MySQL
 - **Payment Gateway**: eSewa
 - **Email**: PHPMailer
+- **AI Engine**: Google Vertex AI (Imagen on Vertex AI)
 
 ### Database
 - MySQL with migrations for schema management
@@ -51,6 +53,11 @@ This e-commerce platform provides:
 2. Update database credentials in `backend/config/database.php`
 3. Import database schema from `backend/database_*.sql` files
 4. Configure email settings in `backend/config/email.php`
+5. **AI Try-On Setup**:
+   - Install [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)
+   - Authenticate: `gcloud auth login`
+   - Set project: `gcloud config set project e-commerce-wearitnow`
+   - Ensure the Apache/XAMPP user has permissions to run `gcloud` commands.
 
 ### Frontend Setup
 1. Navigate to `frontend/` directory
@@ -78,6 +85,11 @@ This e-commerce platform provides:
 - Loyalty points system
 - Real-time notifications
 - Email notifications
+- **AI Virtual Try-On**:
+  - **Smart Try**: AI-generated realistic try-on using Vertex AI.
+  - **Live AR**: Pose-detection based real-time clothing overlay using TensorFlow.js.
+  - **Camera Integration**: Support for live photo capture directly from the browser.
+  - **Manual Adjustments**: Fine-tune clothing position, scale, and opacity.
 
 ## License
 
