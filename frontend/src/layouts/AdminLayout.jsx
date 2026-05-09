@@ -50,8 +50,8 @@ const AdminLayout = () => {
     return (
         <div className="flex min-h-screen bg-black text-gray-400 font-sans selection:bg-indigo-500/30">
             {/* HUD Sidebar */}
-            <aside className="w-80 border-r border-white/5 flex flex-col fixed h-full z-50 bg-black/80 backdrop-blur-3xl">
-                <div className="p-10 border-b border-white/5">
+            <aside className="w-64 border-r border-white/5 flex flex-col fixed h-full z-50 bg-black/80 backdrop-blur-3xl">
+                <div className="p-6 border-b border-white/5">
                     <div className="flex items-center space-x-3 mb-2">
                         <ShieldCheck className="text-indigo-500" size={24} />
                         <h1 className="text-xl font-black tracking-tighter text-white italic">ADMIN PANEL</h1>
@@ -59,14 +59,14 @@ const AdminLayout = () => {
                     <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Global Operations Console</p>
                 </div>
 
-                <nav className="flex-1 px-6 py-10 space-y-2">
+                <nav className="flex-1 px-4 py-6 space-y-1">
                     {navItems.map((item) => (
                         <Link
                             key={item.path}
                             to={item.path}
-                            className={`flex items-center justify-between px-6 py-4 rounded-3xl transition-all duration-300 group ${
+                            className={`flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-300 group ${
                                 location.pathname === item.path 
-                                ? "bg-indigo-600 text-white shadow-2xl shadow-indigo-500/20" 
+                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" 
                                 : "hover:bg-white/5 hover:text-white"
                             }`}
                         >
@@ -81,7 +81,7 @@ const AdminLayout = () => {
                     <div className="pt-10 mt-10 border-t border-white/5">
                         <Link
                             to="/"
-                            className="flex items-center px-6 py-4 rounded-3xl text-gray-600 hover:text-white transition-all space-x-4"
+                            className="flex items-center px-4 py-3 rounded-2xl text-gray-600 hover:text-white transition-all space-x-4"
                         >
                             <ArrowLeft size={18} />
                             <span className="font-bold text-sm">Return to Site</span>
@@ -104,9 +104,9 @@ const AdminLayout = () => {
             </aside>
 
             {/* Main Viewport */}
-            <main className="flex-1 ml-80 min-h-screen bg-black">
+            <main className="flex-1 ml-64 min-h-screen bg-black">
                 {/* HUD Top Bar */}
-                <div className="sticky top-0 h-24 border-b border-white/5 flex items-center justify-between px-10 bg-black/50 backdrop-blur-md z-40">
+                <div className="sticky top-0 h-16 border-b border-white/5 flex items-center justify-between px-8 bg-black/50 backdrop-blur-md z-40">
                     <div className="bg-white/5 px-4 py-2 rounded-full border border-white/5 text-[10px] font-black tracking-widest text-gray-500">
                         SYSTEM VERSION: 2.4.0-STABLE
                     </div>
@@ -117,6 +117,16 @@ const AdminLayout = () => {
                         </button>
                         <button className="text-gray-500 hover:text-white transition">
                             <Settings size={20} />
+                        </button>
+                        <button 
+                            onClick={() => {
+                                logout();
+                                navigate("/");
+                            }}
+                            className="flex items-center space-x-2 text-rose-500 hover:text-rose-400 transition bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20"
+                        >
+                            <LogOut size={16} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Logout</span>
                         </button>
                     </div>
                 </div>

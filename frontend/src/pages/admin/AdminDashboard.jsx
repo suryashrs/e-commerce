@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config";
 import {
@@ -10,7 +11,7 @@ import {
   BarElement, ArcElement, Title, Tooltip, Legend, Filler
 } from "chart.js";
 import {
-  TrendingUp, Users, ShoppingBag, DollarSign, Clock,
+  TrendingUp, Users, ShoppingBag, Banknote, Clock,
   Download, ArrowUpRight, ArrowDownRight, ChevronDown,
   ChevronUp, RefreshCw, Store, Package, Star, Eye,
   BarChart2, PieChart, Activity, CheckCircle, AlertCircle
@@ -69,23 +70,27 @@ const downloadCSV = (data, filename) => {
 };
 
 // ── Stat Card ─────────────────────────────────────────────────────────
-const StatCard = ({ title, value, sub, icon: Icon, color, trend, trendVal }) => (
-  <div className="bg-gray-800/50 border border-gray-700/50 rounded-3xl p-6 hover:scale-[1.02] transition-all">
-    <div className="flex justify-between items-start mb-4">
-      <div className={`p-3 rounded-2xl ${color}/10`}>
-        <Icon className={color.replace("bg-", "text-")} size={22} />
+const StatCard = ({ title, value, sub, icon: Icon, color, trend, trendVal, onClick }) => (
+  <button 
+    onClick={onClick}
+    disabled={!onClick}
+    className={`w-full text-left bg-gray-800/50 border border-gray-700/50 rounded-2xl p-5 transition-all ${onClick ? "hover:scale-[1.02] cursor-pointer hover:border-indigo-500/50 active:scale-95" : ""}`}
+  >
+    <div className="flex justify-between items-start mb-3">
+      <div className={`p-2.5 rounded-xl ${color}/10`}>
+        <Icon className={color.replace("bg-", "text-")} size={18} />
       </div>
       {trendVal !== undefined && (
-        <span className={`text-xs font-bold flex items-center gap-1 ${trendVal >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-          {trendVal >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+        <span className={`text-[10px] font-bold flex items-center gap-0.5 ${trendVal >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+          {trendVal >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
           {Math.abs(trendVal)}%
         </span>
       )}
     </div>
-    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
-    <p className="text-3xl font-black text-white">{value}</p>
-    {sub && <p className="text-indigo-400 text-xs font-bold mt-1">{sub}</p>}
-  </div>
+    <p className="text-gray-500 text-[9px] font-black uppercase tracking-widest mb-0.5">{title}</p>
+    <p className="text-xl font-black text-white">{value}</p>
+    {sub && <p className="text-indigo-400 text-[10px] font-bold mt-0.5">{sub}</p>}
+  </button>
 );
 
 // ── Seller Row ────────────────────────────────────────────────────────
@@ -163,6 +168,7 @@ const SellerRow = ({ seller, rank }) => {
 
 // ── Main Dashboard ────────────────────────────────────────────────────
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -274,52 +280,53 @@ const AdminDashboard = () => {
   // ── Derived stats ─────────────────────────────────────────────────
   const todayRevenue = stats?.revenue?.today ?? 0;
   const yesterdayRevenue = stats?.revenue?.yesterday ?? 0;
-  const trend7 = pct(stats?.revenue?.last7days ?? 0, (analytics?.daily?.slice(-14, -7).reduce((a, b) => a + b.revenue, 0)) ?? 1);
+  const trend7 = pct(stats?.revenue?.last7days ?? 0, (analytics?.daily?.slice(-14, -7)?.reduce((a, b) => a + b.revenue, 0)) ?? 1);
 
   const totalSellerRevenue = analytics?.sellers?.reduce((a, b) => a + parseFloat(b.total_revenue || 0), 0) ?? 0;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* ── Header ── */}
-      <header className="flex flex-wrap justify-between items-start gap-4">
+      <header className="p-8 pb-0 flex flex-wrap justify-between items-start gap-4">
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tight">Analytics Console</h1>
-          <p className="text-gray-400 mt-1 text-sm">Platform revenue, sales, and merchant intelligence.</p>
+          <h1 className="text-2xl font-black text-white tracking-tight">Analytics Console</h1>
+          <p className="text-gray-400 mt-1 text-[10px] uppercase font-bold tracking-widest">Platform revenue & merchant intelligence</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={fetchAll}
-            className="flex items-center gap-2 bg-gray-800 border border-gray-700 px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white transition"
+            className="flex items-center gap-2 bg-gray-800 border border-gray-700 px-3 py-1.5 rounded-lg text-[10px] font-black text-gray-400 hover:text-white transition"
           >
-            <RefreshCw size={14} /> Refresh
+            <RefreshCw size={12} /> Refresh
           </button>
-          <div className="bg-gray-800/50 border border-gray-700 px-4 py-2 rounded-xl text-xs font-bold text-gray-400">
-            <Clock className="inline mr-2" size={13} />
+          <div className="bg-gray-800/50 border border-gray-700 px-3 py-1.5 rounded-lg text-[10px] font-black text-gray-400">
+            <Clock className="inline mr-2" size={12} />
             {lastUpdated.toLocaleTimeString()}
           </div>
         </div>
       </header>
 
-      {/* ── Nav Tabs ── */}
-      <div className="flex gap-2 p-1 bg-gray-800/50 rounded-2xl w-fit border border-gray-700/50">
-        {[
-          { key: "overview", label: "Overview", icon: BarChart2 },
-          { key: "sellers", label: "Active Sellers", icon: Users },
-          { key: "products", label: "Top Products", icon: Package },
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-              activeTab === tab.key
-                ? "bg-indigo-600 text-white shadow-lg"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            <tab.icon size={15} /> {tab.label}
-          </button>
-        ))}
-      </div>
+      <div className="px-8 space-y-6">
+        {/* ── Nav Tabs ── */}
+        <div className="flex gap-1.5 p-1 bg-gray-800/50 rounded-xl w-fit border border-gray-700/50">
+          {[
+            { key: "overview", label: "Overview", icon: BarChart2 },
+            { key: "sellers", label: "Active Sellers", icon: Users },
+            { key: "products", label: "Top Products", icon: Package },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === tab.key
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <tab.icon size={14} /> {tab.label}
+            </button>
+          ))}
+        </div>
 
       {/* ══════════════════════════════════════════════
           TAB: OVERVIEW
@@ -333,42 +340,50 @@ const AdminDashboard = () => {
               value={fmt(todayRevenue)}
               sub={`${fmt(stats?.revenue?.platform_today)} Commission`}
               trendVal={parseFloat(pct(todayRevenue, yesterdayRevenue))}
+              onClick={() => navigate("/admin/orders")}
             />
             <StatCard
               title="Last 7 Days" icon={Activity} color="bg-emerald-500"
               value={fmt(stats?.revenue?.last7days)}
               sub={`${fmt(stats?.revenue?.platform_7days)} Commission`}
               trendVal={parseFloat(trend7)}
+              onClick={() => navigate("/admin/orders")}
             />
             <StatCard
-              title="Platform Revenue" icon={DollarSign} color="bg-amber-500"
+              title="Platform Revenue" icon={Banknote} color="bg-amber-500"
               value={fmt(stats?.revenue?.platform_lifetime)}
               sub="All-time commission"
+              onClick={() => navigate("/admin/orders")}
             />
             <StatCard
               title="Total GMV" icon={ShoppingBag} color="bg-purple-500"
               value={fmt(stats?.revenue?.lifetime)}
               sub={`${stats?.counts?.completed_orders || 0} Completed Orders`}
+              onClick={() => navigate("/admin/orders")}
             />
           </div>
 
           {/* ── Secondary Metrics ── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: "Active Sellers", val: stats?.counts?.active_sellers ?? 0, icon: Store, color: "bg-cyan-500" },
-              { label: "Pending Requests", val: stats?.counts?.pending_shops ?? 0, icon: AlertCircle, color: "bg-amber-500" },
-              { label: "Total Products", val: stats?.counts?.total_products ?? 0, icon: Package, color: "bg-pink-500" },
-              { label: "Flagged Products", val: stats?.counts?.flagged_products ?? 0, icon: Eye, color: "bg-rose-500" },
+              { label: "Active Sellers", val: stats?.counts?.active_sellers ?? 0, icon: Store, color: "bg-cyan-500", path: "/admin/users" },
+              { label: "Pending Requests", val: stats?.counts?.pending_shops ?? 0, icon: AlertCircle, color: "bg-amber-500", path: "/admin/sellers" },
+              { label: "Total Products", val: stats?.counts?.total_products ?? 0, icon: Package, color: "bg-pink-500", path: "/admin/products" },
+              { label: "Flagged Products", val: stats?.counts?.flagged_products ?? 0, icon: Eye, color: "bg-rose-500", path: "/admin/products" },
             ].map(m => (
-              <div key={m.label} className="bg-gray-800/30 border border-gray-700/50 rounded-2xl p-4 flex items-center gap-4">
-                <div className={`${m.color}/10 p-3 rounded-xl`}>
+              <button 
+                key={m.label} 
+                onClick={() => navigate(m.path)}
+                className="bg-gray-800/30 border border-gray-700/50 rounded-2xl p-4 flex items-center gap-4 hover:bg-gray-800/50 hover:scale-105 transition-all text-left group active:scale-95"
+              >
+                <div className={`${m.color}/10 p-3 rounded-xl group-hover:scale-110 transition-transform`}>
                   <m.icon className={m.color.replace("bg-", "text-")} size={20} />
                 </div>
                 <div>
                   <p className="text-2xl font-black text-white">{m.val}</p>
                   <p className="text-[10px] text-gray-500 uppercase font-bold">{m.label}</p>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
 
@@ -614,6 +629,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

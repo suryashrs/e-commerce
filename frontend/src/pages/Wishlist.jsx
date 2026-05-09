@@ -16,10 +16,10 @@ const Wishlist = () => {
     };
 
     return (
-        <div className="space-y-8">
-            <section className="text-center py-12 bg-gradient-to-r from-black via-gray-800 to-gray-600 rounded-3xl shadow-2xl">
-                <h1 className="text-5xl font-bold mb-4 text-white">❤️ My Wishlist</h1>
-                <p className="text-xl text-white">
+        <div className="space-y-6">
+            <section className="text-center py-8 bg-gradient-to-r from-black via-gray-800 to-gray-600 rounded-2xl shadow-2xl">
+                <h1 className="text-2xl font-black mb-1 text-white tracking-tight italic">❤️ My Wishlist</h1>
+                <p className="text-[10px] text-white/60 font-black uppercase tracking-[0.3em]">
                     {wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'} saved for later
                 </p>
             </section>
@@ -56,28 +56,28 @@ const Wishlist = () => {
                                     />
                                 </div>
                             </Link>
-                            <div className="p-5">
+                            <div className="p-3">
                                 <Link to={`/product/${product.id}`}>
-                                    <h3 className="text-lg font-bold mb-1 text-gray-800 hover:text-gray-600 transition">
+                                    <h3 className="text-xs font-bold mb-0.5 text-gray-800 hover:text-gray-600 transition truncate">
                                         {product.name}
                                     </h3>
                                 </Link>
-                                <p className="text-gray-600 text-sm mb-2 font-medium">
+                                <p className="text-gray-400 text-[9px] mb-1 font-black uppercase tracking-widest">
                                     {product.category}
                                 </p>
-                                <p className="text-2xl font-bold text-black mb-4">
+                                <p className="text-sm font-black text-black mb-3">
                                     Rs {product.price}
                                 </p>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => handleAddToCart(product)}
-                                        className="flex-1 bg-black text-white px-4 py-2 rounded-full font-bold hover:bg-gray-800 transition"
+                                        className="flex-1 bg-black text-white px-3 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-gray-800 transition"
                                     >
                                         Add to Cart
                                     </button>
                                     <button
                                         onClick={() => handleRemove(product.id)}
-                                        className="px-4 py-2 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition"
+                                        className="px-3 py-1.5 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
                                         title="Remove from wishlist"
                                     >
                                         <svg

@@ -40,6 +40,8 @@ const BuyerDashboard = () => {
     const [notifications, setNotifications] = useState([]);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    const [paymentHistory, setPaymentHistory] = useState([]);
+    const [paymentsLoading, setPaymentsLoading] = useState(false);
     
     // Payment Success state
     const [paymentSuccessModal, setPaymentSuccessModal] = useState(false);
@@ -64,8 +66,29 @@ const BuyerDashboard = () => {
         }
         fetchOrders();
         fetchProfileData();
-        fetchNotifications();
+        fetchPaymentHistory();
     }, [user, navigate]);
+
+    const fetchPaymentHistory = async () => {
+        if (!user) return;
+        setPaymentsLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/payments.php?user_id=${user.id}&role=buyer`);
+            if (res.ok) {
+                const data = await res.json();
+                console.log("Fetched buyer payments:", data);
+                // Handle both direct array responses and wrapped body responses
+                const history = Array.isArray(data.body) ? data.body : (Array.isArray(data) ? data : []);
+                setPaymentHistory(history);
+            } else {
+                console.warn("Failed to fetch payments, status:", res.status);
+            }
+        } catch (err) {
+            console.error("Failed to fetch payment history", err);
+        } finally {
+            setPaymentsLoading(false);
+        }
+    };
 
     // Mode Guard: Redirect to Seller Portal if in seller mode
     useEffect(() => {
@@ -257,14 +280,14 @@ const BuyerDashboard = () => {
 
     const renderProfile = () => (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-10 py-8 border-b border-gray-50 flex justify-between items-center">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-50 flex justify-between items-center">
                     <div>
-                        <h2 className="text-2xl font-black tracking-tight">Edit Profile</h2>
-                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Personal Settings</p>
+                        <h2 className="text-xl font-black tracking-tight">Edit Profile</h2>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Personal Settings</p>
                     </div>
                 </div>
-                <form onSubmit={handleProfileSubmit} className="p-10 space-y-10">
+                <form onSubmit={handleProfileSubmit} className="p-6 space-y-8">
                     <div className="flex items-center gap-8 pb-8 border-b border-gray-50">
                         <div className="relative group">
                             {user.avatar ? (
@@ -355,9 +378,9 @@ const BuyerDashboard = () => {
                         <div className="md:col-span-2 space-y-3">
                             <label className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Bio</label>
                             <textarea 
-                                name="bio" rows="4" value={formData.bio} onChange={handleProfileChange}
+                                name="bio" rows="3" value={formData.bio} onChange={handleProfileChange}
                                 placeholder="Describe yourself..."
-                                className="w-full px-8 py-6 bg-gray-50/50 border border-transparent focus:bg-white focus:border-gray-200 rounded-[2.5rem] transition font-bold resize-none"
+                                className="w-full px-6 py-4 bg-gray-50/50 border border-transparent focus:bg-white focus:border-gray-200 rounded-2xl transition font-bold resize-none"
                             ></textarea>
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest pl-2">Max 1024 characters</p>
                         </div>
@@ -385,13 +408,13 @@ const BuyerDashboard = () => {
     );
 
     const renderOrders = () => (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8 pb-10">
-            <h2 className="text-3xl font-black tracking-tight">My Orders</h2>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6 pb-10">
+            <h2 className="text-xl font-black tracking-tight uppercase tracking-widest">My Orders</h2>
             {orders.length > 0 ? (
                 orders.map((order) => {
                     const statusInfo = getStatusInfo(order.status);
                     return (
-                        <div key={order.id} className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 hover:shadow-md transition-all">
+                        <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
                             <div className="flex justify-between items-start mb-8">
                                 <div>
                                     <h3 className="text-xl font-black tracking-tight">Order #{order.id}</h3>
@@ -509,98 +532,133 @@ const BuyerDashboard = () => {
         }
     };
 
-    const renderNotifications = () => (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden min-h-[500px]">
-                <div className="px-10 py-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/20">
-                    <div>
-                        <h2 className="text-2xl font-black tracking-tight">Activity Alerts</h2>
-                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Your recent updates</p>
-                    </div>
-                    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 flex items-center justify-center rounded-2xl shadow-inner">
-                        <Bell size={24} />
-                    </div>
-                </div>
-                <div className="p-8">
-                    {notifications.length > 0 ? (
-                        <div className="space-y-4">
-                            {notifications.map((notif) => (
-                                <div key={notif.id} className={`p-6 rounded-2xl border ${!notif.is_read ? 'border-indigo-100 bg-indigo-50/50 shadow-sm' : 'border-gray-50 bg-white hover:bg-gray-50'} transition-colors flex gap-6 items-start group`}>
-                                    <div className="w-12 h-12 shrink-0 bg-white shadow-sm border border-gray-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <Bell className="text-indigo-500" size={18} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-[10px] font-black tracking-widest uppercase text-indigo-600">{notif.type.replace('_', ' ')}</span>
-                                            <div className="flex items-center gap-3">
-                                                {!notif.is_read && (
-                                                    <button onClick={() => handleMarkAsRead(notif.id)} className="text-[9px] bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full font-black uppercase tracking-widest hover:bg-indigo-200 transition">Mark as read</button>
-                                                )}
-                                                <span className="text-[10px] font-bold text-gray-400">{new Date(notif.created_at).toLocaleString()}</span>
-                                            </div>
-                                        </div>
-                                        <p className={`text-sm ${!notif.is_read ? 'text-gray-900 font-bold' : 'text-gray-600 font-medium'} leading-relaxed`}>{notif.message}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-20">
-                            <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                                <Bell className="text-gray-300" size={40} />
-                            </div>
-                            <h3 className="text-xl font-black text-gray-800 mb-2">You're all caught up</h3>
-                            <p className="text-gray-400 text-sm font-medium">When you get updates about your orders, they'll appear here.</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+    const handleDeleteNotification = async (notifId) => {
+        setNotifications(prev => prev.filter(n => n.id !== notifId));
+        window.dispatchEvent(new Event('notificationsUpdated'));
+        try {
+            await fetch(`${API_BASE_URL}/notifications/delete_notification.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: notifId })
+            });
+        } catch (err) {
+            console.error("Failed to delete notification:", err);
+        }
+    };
 
     const renderContent = () => {
         switch(activeTab) {
             case 'profile': return renderProfile();
             case 'orders': return renderOrders();
-            case 'notifications': return renderNotifications();
-            case 'points': return renderTrendPoints();
+            case 'payments': return renderPaymentHistory();
             default: return renderOrders();
         }
     };
 
-    return (
-        <div className="min-h-screen bg-[#FDFDFD] py-12 px-8">
-            <div className="max-w-7xl mx-auto">
-                <header className="mb-14 flex justify-between items-end">
-                    <div>
-                        <h1 className="text-5xl font-black tracking-tighter mb-2">Buyer Dashboard</h1>
-                        <p className="text-gray-400 font-medium">Welcome back, {user?.name}!</p>
+    const renderPaymentHistory = () => (
+        <div className="space-y-6 animate-fade-in-up">
+            <div className="flex justify-between items-end mb-2 pl-2">
+                <div>
+                    <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Payment History</h2>
+                    <p className="text-gray-500 mt-1">Review your recent transactions and purchase status.</p>
+                </div>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-md rounded-[2.5rem] shadow-xl border border-white/50 p-8">
+                {paymentsLoading ? (
+                    <div className="py-20 flex flex-col items-center justify-center">
+                        <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Loading Ledger...</p>
                     </div>
-                    <div className="bg-gray-50 flex items-center gap-4 px-6 py-3 rounded-full border border-gray-100 shadow-sm">
-                         <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white font-black text-sm">
+                ) : paymentHistory.length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-separate border-spacing-y-3">
+                            <thead>
+                                <tr className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-4">
+                                    <th className="px-6 py-2">Transaction ID</th>
+                                    <th className="px-6 py-2">Date</th>
+                                    <th className="px-6 py-2">Type</th>
+                                    <th className="px-6 py-2 text-right">Amount</th>
+                                    <th className="px-6 py-2 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {paymentHistory.map((payment) => (
+                                    <tr key={payment.id} className="group bg-gray-50/50 hover:bg-white hover:shadow-lg transition-all duration-300">
+                                        <td className="px-6 py-4 rounded-l-2xl font-bold text-gray-900 border-y border-l border-transparent group-hover:border-gray-100">
+                                            #{payment.id}
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-500 text-sm border-y border-transparent group-hover:border-gray-100">
+                                            {new Date(payment.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                        </td>
+                                        <td className="px-6 py-4 border-y border-transparent group-hover:border-gray-100">
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">{payment.type}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-black text-gray-900 border-y border-transparent group-hover:border-gray-100">
+                                            Rs {parseFloat(payment.amount).toFixed(2)}
+                                        </td>
+                                        <td className="px-6 py-4 rounded-r-2xl text-center border-y border-r border-transparent group-hover:border-gray-100">
+                                            <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                                payment.status.toLowerCase() === 'completed' || payment.status.toLowerCase() === 'delivered'
+                                                    ? 'bg-green-100 text-green-700' 
+                                                    : 'bg-amber-100 text-amber-700'
+                                            }`}>
+                                                {payment.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="py-20 text-center">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-50 mb-4">
+                            <TrendingUp className="text-gray-300" size={32} />
+                        </div>
+                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No transaction records found</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="min-h-screen bg-[#FDFDFD] py-8 px-6">
+            <div className="max-w-7xl mx-auto">
+                <header className="mb-10 flex justify-between items-end">
+                    <div>
+                        <h1 className="text-2xl font-black tracking-tight mb-1">Buyer Dashboard</h1>
+                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Welcome back, {user?.name}!</p>
+                    </div>
+                    <div className="bg-gray-50 flex items-center gap-3 px-4 py-2 rounded-xl border border-gray-100 shadow-sm">
+                         <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white font-black text-xs">
                             {user?.name?.charAt(0).toUpperCase()}
                         </div>
-                        <div className="text-xs">
-                            <p className="font-black text-gray-900">{user?.name}</p>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Buyer Member</p>
+                        <div className="text-[10px]">
+                            <p className="font-black text-gray-900 leading-tight">{user?.name}</p>
+                            <p className="text-gray-400 font-bold uppercase tracking-widest opacity-60">Buyer Member</p>
                         </div>
                     </div>
                 </header>
 
-                <div className="flex flex-col lg:flex-row gap-12">
-                    <aside className="lg:w-80 shrink-0">
-                        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-4 sticky top-32">
+                <div className="flex flex-col lg:flex-row gap-10">
+                    <aside className="lg:w-64 shrink-0">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sticky top-32">
                             <nav className="space-y-2">
                                 {[
                                     { id: 'profile', label: 'Profile', icon: <User size={18} /> },
                                     { id: 'orders', label: 'Orders', icon: <Box size={18} /> },
-                                    { id: 'notifications', label: 'Notifications', icon: <Bell size={18} /> },
+                                    { id: 'payments', label: 'Payments', icon: <TrendingUp size={18} /> },
                                     { id: 'points', label: 'TrendPoints', icon: <TrendingUp size={18} /> },
                                 ].map((item) => (
                                     <button
                                         key={item.id}
                                         onClick={() => setActiveTab(item.id)}
-                                        className={`w-full flex items-center justify-between px-6 py-5 rounded-[1.5rem] transition-all group ${
+                                        className={`w-full flex items-center justify-between px-5 py-4 rounded-xl transition-all group ${
                                             activeTab === item.id 
                                             ? 'bg-amber-400 text-white shadow-lg shadow-amber-100' 
                                             : 'text-gray-400 hover:bg-gray-50 hover:text-gray-900'

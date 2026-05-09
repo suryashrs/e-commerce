@@ -37,6 +37,13 @@ class Order {
                     $stmt_item->bindParam(":quantity", $item->quantity);
                     $stmt_item->bindParam(":price", $item->price);
                     $stmt_item->execute();
+
+                    // Update product stock
+                    $update_stock_query = "UPDATE products SET stock = stock - :quantity WHERE id = :product_id";
+                    $update_stmt = $this->conn->prepare($update_stock_query);
+                    $update_stmt->bindParam(":quantity", $item->quantity);
+                    $update_stmt->bindParam(":product_id", $item->product_id);
+                    $update_stmt->execute();
                 }
 
                 $this->conn->commit();

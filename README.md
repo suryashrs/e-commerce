@@ -36,22 +36,23 @@ This e-commerce platform provides:
 ```
 ├── backend/              # PHP REST API
 │   ├── api/             # API endpoints (auth, products, orders, checkout, etc.)
-│   ├── config/          # Database and CORS configuration
-│   ├── database/        # SQL migrations
+│   ├── config/          # CORS and Email configuration
 │   ├── src/             # Model controllers and utilities
+│   ├── database.sql     # Consolidated SQL schema
+│   ├── populate_products.php # Product seed script
 │   └── uploads/         # User avatars and product images
 ├── frontend/            # React SPA
 │   ├── src/            # React components, pages, services
 │   └── public/         # Static assets
-└── seller_dashboard/    # Seller-specific interface
+└── ...
 ```
 
 ## Getting Started
 
 ### Backend Setup
 1. Place the project in your web server root (e.g., `htdocs/e-commerce`)
-2. Update database credentials in `backend/config/database.php`
-3. Import database schema from `backend/database_*.sql` files
+2. Update database credentials in `backend/src/Config/Database.php`
+3. Import database schema from `backend/database.sql`
 4. Configure email settings in `backend/config/email.php`
 5. **AI Try-On Setup**:
    - Install [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)
@@ -67,9 +68,8 @@ This e-commerce platform provides:
 5. Build for production: `npm run build`
 
 ### Database
-- Main schema: `backend/database.sql`
-- Coupons: `backend/database_coupons.sql`
-- Notifications: `backend/database_notifications.sql`
+- Consolidated schema: `backend/database.sql`
+- Seed data: `backend/populate_products.php`
 
 ## Features
 

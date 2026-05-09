@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config";
 import { CheckCircle2, ArrowRight, ShieldCheck, Mail } from "lucide-react";
 
-const loginImage = "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop";
+const authImage = "/assets/images/auth_bg.jpg";
 
 const ForgotPassword = () => {
     const navigate = useNavigate();

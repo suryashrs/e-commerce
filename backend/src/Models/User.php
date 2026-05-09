@@ -211,6 +211,14 @@ class User {
     }
 
     // Approve Seller
+    public function approveSeller($id){
+        $query = "UPDATE " . $this->table_name . " SET shop_status = 'approved' WHERE id = :id AND role = 'seller'";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id);
+        return $stmt->execute();
+    }
+
+    // Update Shop Status (General)
     public function updateShopStatus($id, $status){
         $query = "UPDATE " . $this->table_name . " SET shop_status = :status WHERE id = :id AND role = 'seller'";
         $stmt = $this->conn->prepare($query);

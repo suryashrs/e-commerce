@@ -7,7 +7,7 @@ import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 // Thrift-themed hero slides
 const heroSlides = [
     {
-        image: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=2074&auto=format&fit=crop",
+        image: "/assets/images/thrift_hero.jpg",
         tag: "Sustainable Fashion",
         headline: "Preloved.\nPerfect.",
         sub: "Give clothes a second life. Save money, save the planet.",
@@ -15,7 +15,7 @@ const heroSlides = [
         badge: "♻️ Eco-Friendly",
     },
     {
-        image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop",
+        image: "/assets/images/thrift_collection.jpg",
         tag: "Up to 70% Off",
         headline: "Hidden Gems\nAwaiting You",
         sub: "One-of-a-kind vintage finds you won't see anywhere else.",
@@ -23,7 +23,7 @@ const heroSlides = [
         badge: "⭐ Quality Checked",
     },
     {
-        image: "https://images.unsplash.com/photo-1467043237213-65f2da53396f?q=80&w=2070&auto=format&fit=crop",
+        image: "/assets/images/hero1.jpg",
         tag: "Circular Fashion",
         headline: "Style the\nEarth Loves",
         sub: "Every purchase reduces waste and supports a greener future.",

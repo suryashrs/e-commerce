@@ -16,8 +16,12 @@ const TryOn = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  // Smart Try garment source: 'catalog' or 'custom'
+  const [garmentSource, setGarmentSource] = useState("catalog");
+  const [customGarmentImage, setCustomGarmentImage] = useState(null); // { src: dataUrl, name: string }
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const garmentInputRef = useRef(null);
   const webcamRef = useRef(null);
 
   useEffect(() => {
@@ -137,20 +141,46 @@ const TryOn = () => {
     setOpacity(0.95);
   };
 
+  const handleCustomGarmentUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCustomGarmentImage({ src: event.target.result, name: file.name });
+        setGeneratedImage(null);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Get the active garment image URL to send to the AI
+  const getActiveGarmentUrl = () => {
+    if (garmentSource === "custom" && customGarmentImage) {
+      return customGarmentImage.src; // Data URL
+    }
+    if (selectedProduct) {
+      return selectedProduct.try_on_image_url && selectedProduct.try_on_image_url.trim() !== ""
+        ? selectedProduct.try_on_image_url
+        : selectedProduct.image_url;
+    }
+    return null;
+  };
+
   const generateSmartTry = async () => {
-    if (!userImage || !selectedProduct) return;
-    
+    const garmentUrl = getActiveGarmentUrl();
+    if (!userImage || !garmentUrl) return;
+
     setIsGenerating(true);
     setGeneratedImage(null);
     try {
-      const response = await fetch("http://localhost/e-commerce/backend/api/vertex_tryon.php", {
+      const response = await fetch("http://localhost/e-commerce/backend/api/smart_tryon.php", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           person_image: userImage.src,
-          garment_image: selectedProduct.image_url
+          garment_image: garmentUrl
         })
       });
 
@@ -194,7 +224,7 @@ const TryOn = () => {
               onClick={() => setMode("smart_try")}
               className={`flex-1 py-3 rounded-xl font-bold transition flex justify-center items-center gap-2 shadow-sm ${mode === "smart_try" ? "bg-blue-600 text-white" : "bg-transparent text-gray-500 hover:text-blue-600"}`}
             >
-              ✨ Smart Try
+              ✨ Smart Try-On
             </button>
             <button
               onClick={() => setMode("ar")}
@@ -243,36 +273,95 @@ const TryOn = () => {
             </div>
           )}
 
-          {/* Select Product */}
+          {/* Select Garment / Product */}
           <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-300">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <span className="bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-sm">
                 2
               </span>
-              Select Product
+              {mode === "smart_try" ? "Select Garment" : "Select Product"}
             </h2>
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-2 gap-3 max-h-96 overflow-y-auto custom-scrollbar p-1">
-              {products.map((p) => (
-                <div
-                  key={p.id}
-                  onClick={() => handleProductSelect(p)}
-                  className={`cursor-pointer border-2 rounded-xl p-2 transition-all transform hover:scale-105 ${selectedProduct?.id == p.id
-                    ? "border-black ring-2 ring-gray-100 shadow-lg"
-                    : "border-gray-100 hover:border-gray-400"
+
+            {/* Garment Source Toggle - Smart Try only */}
+            {mode === "smart_try" && (
+              <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-xl">
+                <button
+                  onClick={() => { setGarmentSource("catalog"); setGeneratedImage(null); }}
+                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${garmentSource === "catalog" ? "bg-white shadow text-blue-600" : "text-gray-500 hover:text-gray-700"
                     }`}
                 >
-                  <img
-                    src={p.image_url}
-                    alt={p.name}
-                    className="w-full h-20 sm:h-24 lg:h-28 object-cover rounded-lg mb-2"
-                  />
-                  <p className="text-[10px] font-bold truncate">{p.name}</p>
-                  <p className="text-[10px] text-gray-900 font-black">
-                    Rs {p.price}
-                  </p>
-                </div>
-              ))}
-            </div>
+                  🛍️ Catalog
+                </button>
+                <button
+                  onClick={() => { setGarmentSource("custom"); setGeneratedImage(null); }}
+                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${garmentSource === "custom" ? "bg-white shadow text-blue-600" : "text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                  📤 Custom Upload
+                </button>
+              </div>
+            )}
+
+            {/* Custom Garment Upload - Smart Try only */}
+            {mode === "smart_try" && garmentSource === "custom" ? (
+              <div>
+                <input
+                  ref={garmentInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCustomGarmentUpload}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => garmentInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-blue-300 rounded-xl p-4 text-blue-500 hover:bg-blue-50 transition flex flex-col items-center gap-2 mb-3"
+                >
+                  <span className="text-3xl">👗</span>
+                  <span className="font-semibold text-sm">Upload Garment Image</span>
+                  <span className="text-xs text-gray-400">JPG, PNG accepted</span>
+                </button>
+                {customGarmentImage && (
+                  <div className="relative group">
+                    <img
+                      src={customGarmentImage.src}
+                      alt="Custom garment"
+                      className="w-full h-40 object-contain rounded-xl border-2 border-blue-400 bg-gray-50 p-2"
+                    />
+                    <button
+                      onClick={() => setCustomGarmentImage(null)}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                    >
+                      ✕
+                    </button>
+                    <p className="text-xs text-gray-500 mt-1 truncate">{customGarmentImage.name}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Catalog Product Grid */
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-2 gap-3 max-h-96 overflow-y-auto custom-scrollbar p-1">
+                {products.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => handleProductSelect(p)}
+                    className={`cursor-pointer border-2 rounded-xl p-2 transition-all transform hover:scale-105 ${selectedProduct?.id == p.id
+                      ? "border-black ring-2 ring-gray-100 shadow-lg"
+                      : "border-gray-100 hover:border-gray-400"
+                      }`}
+                  >
+                    <img
+                      src={p.image_url}
+                      alt={p.name}
+                      className="w-full h-20 sm:h-24 lg:h-28 object-cover rounded-lg mb-2"
+                    />
+                    <p className="text-[10px] font-bold truncate">{p.name}</p>
+                    <p className="text-[10px] text-gray-900 font-black">
+                      Rs {p.price}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Adjustment Controls */}
@@ -390,26 +479,26 @@ const TryOn = () => {
                     <p className="text-gray-500 mt-4 text-sm font-medium">Position yourself clearly in the frame</p>
                   </div>
                 ) : !userImage ? (
-                   <div className="text-center text-gray-400">
+                  <div className="text-center text-gray-400">
                     <div className="text-6xl mb-4">✨</div>
                     <p className="text-xl font-semibold mb-2 text-gray-700">
-                      Vertex AI Smart Try
+                      Smart Try-On
                     </p>
                     <p className="text-sm">
                       Upload your photo or use camera to get started!
                     </p>
                   </div>
-                ) : !selectedProduct ? (
+                ) : !(garmentSource === "catalog" ? selectedProduct : customGarmentImage) ? (
                   <div className="text-center">
                     <img src={userImage.src} className="max-h-[400px] w-auto rounded-2xl shadow-2xl border-8 border-white mx-auto mb-6" alt="User" />
                     <div className="bg-blue-600 text-white px-6 py-3 rounded-full font-bold inline-block animate-bounce shadow-lg">
-                      ⬅️ Now Select a Product to Try On!
+                      {garmentSource === "catalog" ? "⬅️ Now Select a Product to Try On!" : "⬅️ Upload a Garment Image to Try On!"}
                     </div>
                   </div>
                 ) : isGenerating ? (
                   <div className="text-center flex flex-col items-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
-                    <p className="text-lg font-bold text-blue-800 animate-pulse">Generating with Google Vertex AI...</p>
+                    <p className="text-lg font-bold text-blue-800 animate-pulse">Generating with Smart Try-On...</p>
                     <p className="text-sm text-gray-600 mt-2">This may take a few seconds</p>
                   </div>
                 ) : generatedImage ? (
@@ -417,22 +506,33 @@ const TryOn = () => {
                 ) : (
                   <div className="text-center">
                     <div className="flex gap-6 justify-center items-center mb-8">
-                       {userImage ? (
-                         <img src={userImage.src} className="h-48 w-auto rounded-xl shadow-lg object-cover border-4 border-white" alt="User" />
-                       ) : (
-                         <div className="h-48 w-48 rounded-xl bg-white border-4 border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-4xl">
-                           👤
-                         </div>
-                       )}
-                       <span className="text-4xl text-blue-500">➕</span>
-                       <img src={selectedProduct.image_url} className="h-48 w-auto rounded-xl shadow-lg object-cover border-4 border-white bg-white p-2" alt="Product" />
+                      {userImage ? (
+                        <img src={userImage.src} className="h-48 w-auto rounded-xl shadow-lg object-cover border-4 border-white" alt="User" />
+                      ) : (
+                        <div className="h-48 w-48 rounded-xl bg-white border-4 border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-4xl">
+                          👤
+                        </div>
+                      )}
+                      <span className="text-4xl text-blue-500">➕</span>
+                      {/* Show the active garment preview */}
+                      {garmentSource === "custom" && customGarmentImage ? (
+                        <div className="text-center">
+                          <img src={customGarmentImage.src} className="h-48 w-auto rounded-xl shadow-lg object-contain border-4 border-blue-300 bg-white p-2" alt="Custom Garment" />
+                          <p className="text-xs text-blue-600 mt-1 font-semibold">Custom Garment</p>
+                        </div>
+                      ) : selectedProduct ? (
+                        <div className="text-center">
+                          <img src={selectedProduct.image_url} className="h-48 w-auto rounded-xl shadow-lg object-cover border-4 border-white bg-white p-2" alt="Product" />
+                          <p className="text-xs text-gray-500 mt-1 truncate max-w-[120px]">{selectedProduct.name}</p>
+                        </div>
+                      ) : null}
                     </div>
                     <button
                       onClick={generateSmartTry}
-                      disabled={!userImage}
-                      className={`bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-8 rounded-xl font-bold text-lg transition shadow-xl transform hover:scale-105 ${!userImage ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:from-blue-700 hover:to-indigo-700'}`}
+                      disabled={!userImage || !getActiveGarmentUrl()}
+                      className={`bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-8 rounded-xl font-bold text-lg transition shadow-xl transform hover:scale-105 ${(!userImage || !getActiveGarmentUrl()) ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:from-blue-700 hover:to-indigo-700'}`}
                     >
-                      ✨ {userImage ? "Generate Smart Try" : "Upload Photo to Generate"}
+                      ✨ Generate Smart Try-On
                     </button>
                   </div>
                 )}
@@ -453,12 +553,14 @@ const TryOn = () => {
                   >
                     🔄 Try Another
                   </button>
-                  <Link
-                    to={`/product/${selectedProduct.id}`}
-                    className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg text-center border-2 border-blue-600 flex items-center justify-center gap-2"
-                  >
-                    🛒 Buy This Item
-                  </Link>
+                  {selectedProduct && garmentSource === "catalog" && (
+                    <Link
+                      to={`/product/${selectedProduct.id}`}
+                      className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg text-center border-2 border-blue-600 flex items-center justify-center gap-2"
+                    >
+                      🛒 Buy This Item
+                    </Link>
+                  )}
                 </div>
               )}
             </div>

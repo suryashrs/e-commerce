@@ -20,9 +20,9 @@ class Transaction {
          $query = "INSERT INTO " . $this->table_name . " SET seller_id=:seller_id, order_id=:order_id, amount=:amount, platform_commission=:platform_commission";
          $stmt = $this->conn->prepare($query);
 
-         // We use Rs. 100 as a static platform commission
+         // Default to 10% if not explicitly set
          if(!$this->platform_commission){
-            $this->platform_commission = 100.00; 
+            $this->platform_commission = $this->amount * 0.10; 
          }
 
          $stmt->bindParam(":seller_id", $this->seller_id);

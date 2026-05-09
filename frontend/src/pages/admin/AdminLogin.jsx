@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
-const loginImage = "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop";
+const authImage = "/assets/images/auth_bg.jpg";
 
 const AdminLogin = () => {
     const [email, setEmail] = useState("");

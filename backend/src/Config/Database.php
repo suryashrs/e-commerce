@@ -19,7 +19,8 @@ class Database {
             $this->conn->exec("set names utf8");
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch(PDOException $exception) {
-            // Error handled by returning null instead of echoing, allowing callers to send JSON errors
+            // For debugging, reveal the specific error:
+            die(json_encode(["success" => false, "error" => "Database Connection Error: " . $exception->getMessage()]));
             return null;
         }
 

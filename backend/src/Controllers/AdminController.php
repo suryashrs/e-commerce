@@ -38,8 +38,8 @@ class AdminController {
         $query_counts = "SELECT 
             (SELECT COUNT(*) FROM products) as total_products,
             (SELECT COUNT(*) FROM products WHERE is_flagged = 1) as flagged_products,
-            (SELECT COUNT(*) FROM users WHERE role = 'seller' AND status = 'pending') as pending_shops,
-            (SELECT COUNT(*) FROM users WHERE role = 'seller' AND status = 'active') as active_sellers,
+            (SELECT COUNT(*) FROM users WHERE role = 'seller' AND shop_status = 'pending') as pending_shops,
+            (SELECT COUNT(*) FROM users WHERE role = 'seller' AND shop_status = 'approved') as active_sellers,
             (SELECT COUNT(*) FROM orders WHERE status = 'delivered') as completed_orders";
         $stmt_counts = $this->db->query($query_counts);
         $counts = $stmt_counts->fetch(PDO::FETCH_ASSOC);
@@ -61,7 +61,7 @@ class AdminController {
     }
 
     public function getPendingSellers(){
-        $query = "SELECT id, name, email, created_at FROM users WHERE role = 'seller' AND status = 'pending'";
+        $query = "SELECT id, name, email, shop_name, created_at FROM users WHERE role = 'seller' AND shop_status = 'pending'";
         $stmt = $this->db->query($query);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

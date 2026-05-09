@@ -16,6 +16,7 @@ include_once '../../src/Models/User.php';
 include_once '../../src/Models/Notification.php';
 include_once '../../src/Models/ActivityLog.php';
 include_once '../../src/Controllers/AdminController.php';
+include_once '../../src/Services/NotificationService.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -31,6 +32,13 @@ if(!empty($data->id)) {
         $notification->type = 'SYSTEM_UPDATE';
         $notification->message = "Congratulations! Your seller account has been approved. You can now start listing products.";
         $notification->create();
+
+        // Send Email Notification
+        $user = new User($db);
+        $user->id = $data->id;
+        if ($user->readOne()) {
+            NotificationService::sendSellerApprovalEmail($user->email, $user->name);
+        }
 
         http_response_code(200);
         echo json_encode(["message" => "Seller approved successfully."]);

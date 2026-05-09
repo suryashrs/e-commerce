@@ -2,6 +2,7 @@
 // src/Controllers/AuthController.php
 
 include_once __DIR__ . '/../Models/User.php';
+include_once __DIR__ . '/../Services/NotificationService.php';
 
 class AuthController {
     private $db;
@@ -54,12 +55,19 @@ class AuthController {
             $this->user->name = $data->name;
             $this->user->email = $data->email;
             $this->user->password = $data->password;
-            // Default to buyer if no role specified, ensure only valid roles are passed
-            $valid_roles = ['admin', 'buyer', 'seller'];
+            $valid_roles = ['buyer', 'seller'];
             $role = isset($data->role) && in_array($data->role, $valid_roles) ? $data->role : 'buyer';
             $this->user->role = $role;
 
+            // Check if email already exists
+            if($this->user->emailExists()){
+                return array("status" => 409, "body" => array("message" => "Account already exists with this email."));
+            }
+
             if($this->user->create()){
+                // Send Welcome Email
+                NotificationService::sendWelcomeEmail($this->user->email, $this->user->name);
+
                 return array(
                     "status" => 201, 
                     "body" => array(

@@ -18,6 +18,8 @@ import {
     Edit,
     Camera,
     Star,
+    Bell,
+    Trash2,
     MessageSquare as MessageIcon
 } from 'lucide-react';
 import { 
@@ -54,13 +56,17 @@ const Seller = () => {
     const getInitialTab = () => {
         const params = new URLSearchParams(location.search);
         const tab = params.get('tab');
-        if (tab && ['overview', 'products', 'add-product', 'coupons', 'orders', 'profile'].includes(tab)) return tab;
+        if (tab && ['overview', 'products', 'add-product', 'coupons', 'orders', 'reviews', 'payments', 'profile'].includes(tab)) return tab;
         return "overview";
     };
 
     const [activeTab, setActiveTab] = useState(getInitialTab);
     const [sellerOrders, setSellerOrders] = useState([]);
     const [notifications, setNotifications] = useState([]);
+    const [paymentHistory, setPaymentHistory] = useState([]);
+    const [paymentsLoading, setPaymentsLoading] = useState(false);
+    const [paymentPage, setPaymentPage] = useState(1);
+    const paymentsPerPage = 5;
 
     // Mode Guard: Redirect to Buyer Dashboard if in buyer mode
     useEffect(() => {
@@ -76,12 +82,26 @@ const Seller = () => {
         price: '',
         description: '',
         stock: '0',
-        sizes: '',  // Comma separated e.g. S, M, L
-        colors: '',  // Comma separated e.g. Red, Blue
+        sizes: [
+            { size: 'S', stock: 0 },
+            { size: 'M', stock: 0 },
+            { size: 'L', stock: 0 },
+            { size: 'XL', stock: 0 }
+        ],
+        colors: '',
         has_tryon: 0
     });
     const [editingProduct, setEditingProduct] = useState(null);
-    const [editProductForm, setEditProductForm] = useState({ name: '', category: '', price: '', description: '', stock: '0', has_tryon: 0 });
+    const [editProductForm, setEditProductForm] = useState({ 
+        name: '', 
+        category: '', 
+        price: '', 
+        description: '', 
+        stock: '0', 
+        sizes: [], 
+        colors: '',
+        has_tryon: 0 
+    });
     const [image, setImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [imageUrlInput, setImageUrlInput] = useState("");
@@ -109,6 +129,62 @@ const Seller = () => {
     });
     const [couponLoading, setCouponLoading] = useState(false);
     const [couponMessage, setCouponMessage] = useState({ type: '', text: '' });
+
+    // Size Handlers
+    const handleSizeStockChange = (index, value) => {
+        const newSizes = [...formData.sizes];
+        newSizes[index].stock = parseInt(value) || 0;
+        
+        // Auto-calculate total stock
+        const totalStock = newSizes.reduce((acc, curr) => acc + curr.stock, 0);
+        setFormData(prev => ({ ...prev, sizes: newSizes, stock: totalStock.toString() }));
+    };
+
+    const handleAddSize = () => {
+        setFormData(prev => ({
+            ...prev,
+            sizes: [...prev.sizes, { size: '', stock: 0 }]
+        }));
+    };
+
+    const handleRemoveSize = (index) => {
+        const newSizes = formData.sizes.filter((_, i) => i !== index);
+        const totalStock = newSizes.reduce((acc, curr) => acc + curr.stock, 0);
+        setFormData(prev => ({ ...prev, sizes: newSizes, stock: totalStock.toString() }));
+    };
+
+    const handleSizeNameChange = (index, value) => {
+        const newSizes = [...formData.sizes];
+        newSizes[index].size = value.toUpperCase();
+        setFormData(prev => ({ ...prev, sizes: newSizes }));
+    };
+
+    // Edit Size Handlers
+    const handleEditSizeStockChange = (index, value) => {
+        const newSizes = [...editProductForm.sizes];
+        newSizes[index].stock = parseInt(value) || 0;
+        const totalStock = newSizes.reduce((acc, curr) => acc + curr.stock, 0);
+        setEditProductForm(prev => ({ ...prev, sizes: newSizes, stock: totalStock.toString() }));
+    };
+
+    const handleEditAddSize = () => {
+        setEditProductForm(prev => ({
+            ...prev,
+            sizes: [...prev.sizes, { size: '', stock: 0 }]
+        }));
+    };
+
+    const handleEditRemoveSize = (index) => {
+        const newSizes = editProductForm.sizes.filter((_, i) => i !== index);
+        const totalStock = newSizes.reduce((acc, curr) => acc + curr.stock, 0);
+        setEditProductForm(prev => ({ ...prev, sizes: newSizes, stock: totalStock.toString() }));
+    };
+
+    const handleEditSizeNameChange = (index, value) => {
+        const newSizes = [...editProductForm.sizes];
+        newSizes[index].size = value.toUpperCase();
+        setEditProductForm(prev => ({ ...prev, sizes: newSizes }));
+    };
     const [editingCoupon, setEditingCoupon] = useState(null); // null = modal closed
     const [editForm, setEditForm] = useState({ code: '', discount_type: 'percentage', discount_value: '', expiry_date: '' });
     const [editLoading, setEditLoading] = useState(false);
@@ -181,15 +257,20 @@ const Seller = () => {
     }, [location.search]);
 
     useEffect(() => {
-        if (activeTab === "products" && user) {
+        if ((activeTab === "products" || activeTab === "overview") && user) {
             fetchSellerProducts();
-        } else if (activeTab === "coupons" && user) {
+        } 
+        if (activeTab === "coupons" && user) {
             fetchSellerCoupons();
-        } else if ((activeTab === "orders" || activeTab === "overview") && user) {
+        } 
+        if ((activeTab === "orders" || activeTab === "overview") && user) {
             fetchSellerOrders();
-        } else if (activeTab === "notifications" && user) {
-            fetchNotifications();
-        } else if (activeTab === "reviews" && user) {
+            fetchPaymentHistory();
+        } 
+        if (activeTab === "payments" && user) {
+            fetchPaymentHistory();
+        } 
+        if (activeTab === "reviews" && user) {
             fetchSellerReviews();
         }
     }, [activeTab, user]);
@@ -287,6 +368,20 @@ const Seller = () => {
         }
     };
 
+    const handleDeleteNotification = async (notifId) => {
+        setNotifications(prev => prev.filter(n => n.id !== notifId));
+        window.dispatchEvent(new Event('notificationsUpdated'));
+        try {
+            await fetch(`${API_BASE_URL}/notifications/delete_notification.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: notifId })
+            });
+        } catch (err) {
+            console.error("Failed to delete notification:", err);
+        }
+    };
+
     const fetchSellerOrders = async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/orders/seller_orders.php?seller_id=${user.id}`);
@@ -299,6 +394,24 @@ const Seller = () => {
         } catch (error) {
             console.error("Failed to fetch orders", error);
             setSellerOrders([]);
+        }
+    };
+
+    const fetchPaymentHistory = async () => {
+        if (!user) return;
+        setPaymentsLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/payments.php?user_id=${user.id}&role=seller`);
+            if (res.ok) {
+                const data = await res.json();
+                // Handle both direct array responses and wrapped body responses
+                const history = Array.isArray(data.body) ? data.body : (Array.isArray(data) ? data : []);
+                setPaymentHistory(history);
+            }
+        } catch (err) {
+            console.error("Failed to fetch payment history", err);
+        } finally {
+            setPaymentsLoading(false);
         }
     };
 
@@ -553,9 +666,8 @@ const Seller = () => {
         data.append('seller_id', user.id);
         
         // Handle JSON fields for sizes and colors
-        const sizeArray = formData.sizes.split(',').map(s => s.trim()).filter(s => s !== '');
+        data.append('sizes', JSON.stringify(formData.sizes));
         const colorArray = formData.colors.split(',').map(c => c.trim()).filter(c => c !== '');
-        data.append('sizes', JSON.stringify(sizeArray));
         data.append('colors', JSON.stringify(colorArray));
         data.append('has_tryon', formData.has_tryon);
         
@@ -574,7 +686,20 @@ const Seller = () => {
 
             if (response.ok || response.status === 201) {
                 setMessage({ type: 'success', text: 'Product added successfully!' });
-                setFormData({ name: '', category: '', price: '', description: '', stock: '0', sizes: '', colors: '' });
+                setFormData({ 
+                    name: '', 
+                    category: '', 
+                    price: '', 
+                    description: '', 
+                    stock: '0', 
+                    sizes: [
+                        { size: 'S', stock: 0 },
+                        { size: 'M', stock: 0 },
+                        { size: 'L', stock: 0 },
+                        { size: 'XL', stock: 0 }
+                    ], 
+                    colors: '' 
+                });
                 setImage(null);
                 setImagePreview(null);
                 setImageUrlInput("");
@@ -594,6 +719,12 @@ const Seller = () => {
     };
 
     const handleEditProduct = (product) => {
+        // Ensure sizes is in the correct object format
+        let formattedSizes = [];
+        if (Array.isArray(product.sizes)) {
+            formattedSizes = product.sizes.map(s => typeof s === 'object' ? s : { size: s, stock: product.stock });
+        }
+
         setEditingProduct(product);
         setEditProductForm({
             name: product.name,
@@ -601,6 +732,8 @@ const Seller = () => {
             price: product.price,
             description: product.description,
             stock: product.stock.toString(),
+            sizes: formattedSizes,
+            colors: Array.isArray(product.colors) ? product.colors.join(', ') : (product.colors || ''),
             has_tryon: product.has_tryon,
             image_url: product.image_url,
             try_on_image_url: product.try_on_image_url
@@ -678,14 +811,14 @@ const Seller = () => {
 
     const renderProfile = () => (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-10 py-8 border-b border-gray-50 flex justify-between items-center">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-50 flex justify-between items-center">
                     <div>
-                        <h2 className="text-2xl font-black tracking-tight">Edit Merchant Profile</h2>
-                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Store / Personal Settings</p>
+                        <h2 className="text-xl font-black tracking-tight">Edit Merchant Profile</h2>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Store / Personal Settings</p>
                     </div>
                 </div>
-                <form onSubmit={handleProfileSubmit} className="p-10 space-y-10">
+                <form onSubmit={handleProfileSubmit} className="p-6 space-y-8">
                     <div className="flex items-center gap-8 pb-8 border-b border-gray-50">
                         <div className="relative group">
                             {user?.avatar ? (
@@ -765,9 +898,9 @@ const Seller = () => {
                         <div className="md:col-span-2 space-y-3">
                             <label className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Bio / Store Description</label>
                             <textarea 
-                                name="bio" rows="4" value={profileData.bio} onChange={handleProfileChange}
+                                name="bio" rows="3" value={profileData.bio} onChange={handleProfileChange}
                                 placeholder="Describe your store and products..."
-                                className="w-full px-8 py-6 bg-gray-50/50 border border-transparent focus:bg-white focus:border-gray-200 rounded-[2.5rem] transition font-bold resize-none"
+                                className="w-full px-6 py-4 bg-gray-50/50 border border-transparent focus:bg-white focus:border-gray-200 rounded-2xl transition font-bold resize-none"
                             ></textarea>
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest pl-2">Max 1024 characters</p>
                         </div>
@@ -866,6 +999,187 @@ const Seller = () => {
         );
     }
 
+    const renderNotifications = () => (
+        <div className="space-y-8 animate-fade-in-up">
+            <div className="flex justify-between items-end mb-6 pl-2">
+                <div>
+                    <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Recent Alerts</h2>
+                    <p className="text-gray-500 mt-1">Stay updated with your latest sales and account activities.</p>
+                </div>
+                <button 
+                    onClick={fetchNotifications}
+                    className="text-xs font-black text-indigo-600 bg-indigo-50 px-4 py-2 rounded-full hover:bg-indigo-100 transition-all uppercase tracking-widest"
+                >
+                    Refresh
+                </button>
+            </div>
+
+            <div className="grid gap-4">
+                {notifications.length > 0 ? (
+                    notifications.map((notif) => (
+                        <div 
+                            key={notif.id} 
+                            className={`group relative bg-white/90 backdrop-blur-md shadow-xl rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 ${!notif.is_read ? 'border-l-4 border-l-indigo-500 border-white/50' : 'border-white/50 opacity-80'}`}
+                        >
+                            <div className="flex justify-between items-start gap-4">
+                                <div className="flex gap-4">
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-inner ${!notif.is_read ? 'bg-indigo-50 text-indigo-500' : 'bg-gray-50 text-gray-400'}`}>
+                                        {notif.type === 'order' ? '📝' : notif.type === 'payment' ? '💰' : '🔔'}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h4 className={`font-bold text-gray-900 ${!notif.is_read ? 'text-lg' : 'text-base'}`}>{notif.title}</h4>
+                                            {!notif.is_read && (
+                                                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                                            )}
+                                        </div>
+                                        <p className="text-gray-600 font-medium leading-relaxed">{notif.message}</p>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-3">
+                                            {new Date(notif.created_at).toLocaleString()}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    {!notif.is_read && (
+                                        <button 
+                                            onClick={() => handleMarkAsRead(notif.id)}
+                                            className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                                            title="Mark as Read"
+                                        >
+                                            <CheckCircle2 size={16} />
+                                        </button>
+                                    )}
+                                    <button 
+                                        onClick={() => handleDeleteNotification(notif.id)}
+                                        className="p-2 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                                        title="Delete Notification"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="bg-white/90 shadow-2xl rounded-[3rem] p-24 text-center border border-white/50">
+                        <div className="w-24 h-24 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+                            <Bell size={48} strokeWidth={1} />
+                        </div>
+                        <h3 className="text-3xl font-black text-gray-900 tracking-tighter uppercase mb-4">All Caught Up</h3>
+                        <p className="text-gray-500 font-bold max-w-sm mx-auto leading-relaxed">
+                            You don't have any notifications at the moment. We'll let you know when something important happens!
+                        </p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    const renderPaymentHistory = () => (
+        <div className="space-y-8 animate-fade-in-up">
+            <div className="flex justify-between items-end mb-6 pl-2">
+                <div>
+                    <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Earnings & Payments</h2>
+                    <p className="text-gray-500 mt-1">Detailed history of your sales settlements and platform commissions.</p>
+                </div>
+            </div>
+
+            <div className="bg-white/90 backdrop-blur-md shadow-2xl rounded-[2rem] p-8 border border-white/50">
+                {paymentsLoading ? (
+                    <div className="py-20 flex flex-col items-center justify-center">
+                        <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Processing Ledger...</p>
+                    </div>
+                ) : paymentHistory.length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-separate border-spacing-y-4">
+                            <thead>
+                                <tr className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                                    <th className="px-6 pb-2">Ref ID</th>
+                                    <th className="px-6 pb-2">Date</th>
+                                    <th className="px-6 pb-2">Order</th>
+                                    <th className="px-6 pb-2 text-right">Gross</th>
+                                    <th className="px-6 pb-2 text-right">Commission</th>
+                                    <th className="px-6 pb-2 text-right">Net Settlement</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {paymentHistory.slice((paymentPage - 1) * paymentsPerPage, paymentPage * paymentsPerPage).map((payment) => (
+                                    <tr key={payment.id} className="group bg-gray-50/50 hover:bg-white hover:shadow-xl transition-all duration-300">
+                                        <td className="px-6 py-5 rounded-l-2xl font-bold text-gray-900 border-y border-l border-transparent group-hover:border-gray-100">
+                                            TRX-{payment.id}
+                                        </td>
+                                        <td className="px-6 py-5 text-gray-500 text-sm border-y border-transparent group-hover:border-gray-100">
+                                            {new Date(payment.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                        </td>
+                                        <td className="px-6 py-5 border-y border-transparent group-hover:border-gray-100">
+                                            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Order #{payment.order_id}</span>
+                                        </td>
+                                        <td className="px-6 py-5 text-right font-bold text-gray-400 border-y border-transparent group-hover:border-gray-100 line-through decoration-gray-300">
+                                            Rs {parseFloat(payment.amount).toFixed(2)}
+                                        </td>
+                                        <td className="px-6 py-5 text-right font-bold text-rose-500 border-y border-transparent group-hover:border-gray-100">
+                                            - Rs {parseFloat(payment.commission).toFixed(2)}
+                                        </td>
+                                        <td className="px-6 py-5 rounded-r-2xl text-right border-y border-r border-transparent group-hover:border-gray-100">
+                                            <span className="text-lg font-black text-green-600">Rs {parseFloat(payment.net_amount).toFixed(2)}</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        {/* Pagination Controls */}
+                        {paymentHistory.length > paymentsPerPage && (
+                            <div className="mt-8 flex items-center justify-between px-2 pt-6 border-t border-gray-100">
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Showing <span className="text-gray-900">{(paymentPage - 1) * paymentsPerPage + 1}</span> to <span className="text-gray-900">{Math.min(paymentPage * paymentsPerPage, paymentHistory.length)}</span> of <span className="text-gray-900">{paymentHistory.length}</span> settlements
+                                </p>
+                                <div className="flex gap-2">
+                                    <button 
+                                        disabled={paymentPage === 1}
+                                        onClick={() => setPaymentPage(p => Math.max(1, p - 1))}
+                                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 hover:text-black hover:border-black disabled:opacity-30 disabled:hover:border-gray-100 transition-all shadow-sm"
+                                    >
+                                        &larr;
+                                    </button>
+                                    {[...Array(Math.ceil(paymentHistory.length / paymentsPerPage))].map((_, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => setPaymentPage(i + 1)}
+                                            className={`w-10 h-10 rounded-xl font-black text-xs transition-all shadow-sm ${
+                                                paymentPage === i + 1 
+                                                ? "bg-black text-white" 
+                                                : "bg-white border border-gray-100 text-gray-400 hover:border-black hover:text-black"
+                                            }`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                    <button 
+                                        disabled={paymentPage === Math.ceil(paymentHistory.length / paymentsPerPage)}
+                                        onClick={() => setPaymentPage(p => Math.min(Math.ceil(paymentHistory.length / paymentsPerPage), p + 1))}
+                                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 hover:text-black hover:border-black disabled:opacity-30 disabled:hover:border-gray-100 transition-all shadow-sm"
+                                    >
+                                        &rarr;
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="py-20 text-center">
+                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 mb-6 shadow-inner">
+                            <TrendingUp className="text-gray-300" size={32} />
+                        </div>
+                        <h3 className="text-xl font-black text-gray-800 mb-2">No transactions yet</h3>
+                        <p className="text-gray-400 text-sm font-medium">Your earnings will appear here once your orders are settled.</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
     return (
         <div className="min-h-screen bg-[#F8FAFC]">
             {/* Background Accent */}
@@ -873,35 +1187,35 @@ const Seller = () => {
 
             <div className="flex">
             {/* Navigation Sidebar */}
-            <aside className="hidden md:flex sticky top-0 h-screen w-72 z-40 flex-col shrink-0">
-                <div className="bg-white/90 backdrop-blur-xl shadow-2xl m-4 mt-20 rounded-[1.5rem] p-6 flex-1 border border-white/40 flex flex-col overflow-y-auto">
-                    <div className="mb-8 pl-2">
-                        <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">WearIt Now</h2>
-                        <span className="text-xs font-semibold text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-full mt-1 inline-block">Merchant Portal</span>
+            <aside className="hidden md:flex sticky top-0 h-screen w-60 z-40 flex-col shrink-0">
+                <div className="bg-white/90 backdrop-blur-xl shadow-2xl m-4 mt-16 rounded-2xl p-5 flex-1 border border-white/40 flex flex-col overflow-y-auto">
+                    <div className="mb-6 pl-2">
+                        <h2 className="text-xl font-black text-gray-900 tracking-tight">WearIt Now</h2>
+                        <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-full mt-1 inline-block">Merchant Portal</span>
                     </div>
 
-                    <nav className="flex flex-col space-y-2 flex-grow">
+                    <nav className="flex flex-col space-y-1 flex-grow">
                         {[
                             { id: 'overview', icon: '📊', label: 'Overview' },
                             { id: 'products', icon: '🛍️', label: 'My Products' },
                             { id: 'add-product', icon: '➕', label: 'Add Product' },
                             { id: 'coupons', icon: '🎟️', label: 'Coupons' },
                             { id: 'orders', icon: '📝', label: 'Fulfillment' },
+                            { id: 'payments', icon: '💰', label: 'Earnings' },
                             { id: 'reviews', icon: '⭐', label: 'Reviews' },
-                            { id: 'notifications', icon: '🔔', label: 'Notifications' },
                             { id: 'profile', icon: '👤', label: 'Profile' }
                         ].map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center text-left px-4 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                                className={`flex items-center text-left px-3 py-2 rounded-xl font-bold transition-all duration-300 ${
                                     activeTab === tab.id
-                                        ? "bg-black text-white shadow-lg transform scale-[1.02]"
-                                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                                        ? "bg-black text-white shadow-lg text-[11px]"
+                                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-900 text-[11px]"
                                 }`}
                             >
-                                <span className="mr-3 text-xl">{tab.icon}</span>
-                                {tab.label}
+                                <span className="mr-3 text-lg">{tab.icon}</span>
+                                <span className="uppercase tracking-widest">{tab.label}</span>
                             </button>
                         ))}
                     </nav>
@@ -928,8 +1242,8 @@ const Seller = () => {
                     { id: 'add-product', icon: '➕', label: 'Add' },
                     { id: 'coupons', icon: '🎟️', label: 'Coupons' },
                     { id: 'orders', icon: '📝', label: 'Orders' },
+                    { id: 'payments', icon: '💰', label: 'Earnings' },
                     { id: 'reviews', icon: '⭐', label: 'Reviews' },
-                    { id: 'notifications', icon: '🔔', label: 'Alerts' },
                     { id: 'profile', icon: '👤', label: 'Profile' }
                 ].map(tab => (
                     <button
@@ -945,77 +1259,77 @@ const Seller = () => {
             </div>
 
             {/* Main Content Area - offset by sidebar width */}
-            <main className="flex-1 pt-6 md:pt-24 pb-12 px-4 md:px-8 relative z-10 min-h-screen">
-                <div className="max-w-5xl mx-auto space-y-8">
+            <main className="flex-1 pt-6 md:pt-16 pb-8 px-4 md:px-6 relative z-10 min-h-screen">
+                <div className="max-w-5xl mx-auto space-y-6">
                     
                     {/* OVERVIEW TAB */}
                     {activeTab === "overview" && (
-                        <div className="space-y-8 animate-fade-in-up">
-                            <div className="bg-white/90 backdrop-blur-md shadow-2xl rounded-[2rem] p-10 border border-white/50 transition-transform duration-300 hover:-translate-y-2 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)]">
-                                <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-2">Welcome Back, {user.name}!</h1>
-                                <p className="text-gray-500 font-medium">Here's what's happening with your store today.</p>
+                        <div className="space-y-6 animate-fade-in-up">
+                            <div className="bg-white/90 backdrop-blur-md shadow-xl rounded-2xl p-6 border border-white/50 transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl">
+                                <h1 className="text-2xl font-black text-gray-900 tracking-tight">Welcome Back, {user.name}!</h1>
+                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1 opacity-70">Store performance summary</p>
                             </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                     {[
                                         { title: 'Total Sales', value: `Rs ${sellerOrders.reduce((acc, order) => acc + parseFloat(order.total_amount), 0).toFixed(0)}`, icon: '💰', sub: 'Gross Revenue', target: 'orders' },
                                         { title: 'Products', value: sellerProducts.length, icon: '📦', sub: 'Active listings', target: 'products' },
                                         { title: 'Orders', value: sellerOrders.length, icon: '📝', sub: 'Pending fulfillment', target: 'orders' },
-                                        { title: 'Platform Comm.', value: `Rs ${sellerOrders.length * 100}`, icon: '🏷️', sub: 'Total deductions', target: 'orders' }
+                                        { title: 'Comm.', value: `Rs ${(sellerOrders.reduce((acc, order) => acc + parseFloat(order.total_amount), 0) * 0.10).toFixed(0)}`, icon: '🏷️', sub: 'Est. Deductions', target: 'payments' }
                                     ].map((stat, i) => (
                                     <button 
                                         key={i} 
                                         onClick={() => stat.target && setActiveTab(stat.target)}
-                                        className="bg-white shadow-2xl rounded-3xl p-6 border border-gray-100 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] relative overflow-hidden group text-left w-full"
+                                        className="bg-white shadow-xl rounded-2xl p-4 border border-gray-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl relative overflow-hidden group text-left w-full"
                                     >
-                                        <div className="absolute -right-4 -top-4 text-7xl opacity-5 group-hover:scale-110 transition-transform duration-500">
+                                        <div className="absolute -right-3 -top-3 text-4xl opacity-5 group-hover:scale-110 transition-transform duration-500">
                                             {stat.icon}
                                         </div>
-                                        <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl mb-4 shadow-sm border border-gray-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                                        <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-lg mb-2 shadow-sm border border-gray-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                                             {stat.icon}
                                         </div>
-                                        <h3 className="text-gray-500 font-semibold text-sm mb-1 uppercase tracking-wider">{stat.title}</h3>
-                                        <p className="text-3xl font-extrabold text-gray-900 mb-1">{stat.value}</p>
+                                        <h3 className="text-gray-400 font-black text-[9px] mb-0.5 uppercase tracking-widest">{stat.title}</h3>
+                                        <p className="text-lg font-black text-gray-900 mb-0.5">{stat.value}</p>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs font-medium text-gray-400">{stat.sub}</span>
-                                            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-indigo-500" />
+                                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">{stat.sub}</span>
+                                            <ChevronRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-indigo-500" />
                                         </div>
                                     </button>
                                 ))}
                             </div>
 
                             {/* REVENUE TREND CHART */}
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                <div className="lg:col-span-2 bg-white/90 backdrop-blur-md shadow-2xl rounded-[2.5rem] p-10 border border-white/50">
-                                    <div className="flex justify-between items-center mb-10">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2 bg-white/90 backdrop-blur-md shadow-xl rounded-2xl p-6 border border-white/50">
+                                    <div className="flex justify-between items-center mb-6">
                                         <div>
-                                            <h3 className="text-xl font-bold text-gray-900">Revenue Performance</h3>
-                                            <p className="text-sm text-gray-400 font-medium">Last 7 days revenue trend</p>
+                                            <h3 className="text-lg font-black text-gray-900 tracking-tight">Revenue Performance</h3>
+                                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Last 7 days revenue trend</p>
                                         </div>
-                                        <div className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-widest">
+                                        <div className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-indigo-100">
                                             Live Status
                                         </div>
                                     </div>
-                                    <div style={{ height: 300 }}>
+                                    <div style={{ height: 260 }}>
                                         <Line data={getRevenueTrend()} options={chartOptions} />
                                     </div>
                                 </div>
 
-                                <div className="bg-white/90 backdrop-blur-md shadow-2xl rounded-[2.5rem] p-10 border border-white/50 flex flex-col justify-between">
+                                <div className="bg-white/90 backdrop-blur-md shadow-xl rounded-2xl p-6 border border-white/50 flex flex-col justify-between">
                                     <div>
-                                        <h3 className="text-xl font-bold text-gray-900 mb-2">Finance Summary</h3>
-                                        <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                                        <h3 className="text-lg font-black text-gray-900 tracking-tight mb-2">Finance Summary</h3>
+                                        <p className="text-[11px] text-gray-500 font-bold leading-relaxed opacity-80">
                                             Your sales are updated automatically. Track your net growth after platform fees.
                                         </p>
                                     </div>
-                                    <div className="mt-8 pt-8 border-t border-gray-100 space-y-4">
+                                    <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-sm font-bold text-gray-400">Total Commissions</span>
-                                            <span className="text-sm font-black text-rose-500">- Rs {sellerOrders.length * 100}</span>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Commissions</span>
+                                            <span className="text-[11px] font-black text-rose-500">- Rs {sellerOrders.length * 100}</span>
                                         </div>
-                                        <div className="flex items-center justify-between p-4 bg-green-50 rounded-2xl border border-green-100">
-                                            <span className="text-sm font-bold text-green-700">Net Revenue</span>
-                                            <span className="text-lg font-black text-green-700">
+                                        <div className="flex items-center justify-between p-3.5 bg-green-50 rounded-xl border border-green-100">
+                                            <span className="text-[10px] font-black text-green-700 uppercase tracking-widest">Net Revenue</span>
+                                            <span className="text-base font-black text-green-700">
                                                 Rs {sellerOrders.reduce((acc, o) => acc + parseFloat(o.total_amount), 0) - (sellerOrders.length * 100)}
                                             </span>
                                         </div>
@@ -1024,17 +1338,17 @@ const Seller = () => {
                             </div>
 
                             {/* RECENT SALES / CUSTOMER HISTORY */}
-                            <div className="bg-white/90 backdrop-blur-md shadow-2xl rounded-[2.5rem] p-10 border border-white/50">
-                                <div className="flex justify-between items-center mb-8">
+                            <div className="bg-white/90 backdrop-blur-md shadow-xl rounded-2xl p-6 border border-white/50">
+                                <div className="flex justify-between items-center mb-6">
                                     <div>
-                                        <h3 className="text-xl font-bold text-gray-900">Recent Customer Activity</h3>
-                                        <p className="text-sm text-gray-400 font-medium">Identify who is buying from your store</p>
+                                        <h3 className="text-lg font-black text-gray-900 tracking-tight">Recent Activity</h3>
+                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Identify your top customers</p>
                                     </div>
                                     <button 
                                         onClick={() => setActiveTab('orders')}
-                                        className="text-xs font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest transition flex items-center gap-2"
+                                        className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest transition flex items-center gap-1.5 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100"
                                     >
-                                        View Full Ledger <ChevronRight size={14} />
+                                        Full Ledger <ChevronRight size={12} />
                                     </button>
                                 </div>
                                 
@@ -1203,21 +1517,46 @@ const Seller = () => {
                                             className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-semibold text-gray-700 ml-1">Stock Quantity</label>
-                                        <input
-                                            type="number" name="stock" value={formData.stock} onChange={handleInputChange}
-                                            placeholder="50"
-                                            className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-semibold text-gray-700 ml-1">Available Sizes</label>
-                                        <input
-                                            type="text" name="sizes" value={formData.sizes} onChange={handleInputChange}
-                                            placeholder="e.g. S, M, L, XL"
-                                            className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner"
-                                        />
+                                    <div className="col-span-1 md:col-span-2 space-y-3">
+                                        <div className="flex justify-between items-center ml-1">
+                                            <label className="block text-sm font-black text-gray-900 uppercase tracking-widest">Inventory by Size</label>
+                                            <button 
+                                                type="button" onClick={handleAddSize}
+                                                className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition"
+                                            >
+                                                + Add Size
+                                            </button>
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                            {formData.sizes.map((sizeObj, index) => (
+                                                <div key={index} className="bg-gray-50 p-3 rounded-2xl border border-gray-100 relative group">
+                                                    <button 
+                                                        type="button" onClick={() => handleRemoveSize(index)}
+                                                        className="absolute -top-2 -right-2 bg-white text-rose-500 w-6 h-6 rounded-full shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition border border-rose-100"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                    <input 
+                                                        type="text" value={sizeObj.size} 
+                                                        onChange={(e) => handleSizeNameChange(index, e.target.value)}
+                                                        placeholder="Size"
+                                                        className="w-full bg-transparent border-b border-gray-200 focus:border-indigo-500 outline-none text-xs font-black mb-2 uppercase text-center"
+                                                    />
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <span className="text-[9px] font-bold text-gray-400 uppercase">Stock:</span>
+                                                        <input 
+                                                            type="number" value={sizeObj.stock} 
+                                                            onChange={(e) => handleSizeStockChange(index, e.target.value)}
+                                                            className="w-12 bg-white rounded-lg text-center font-black text-xs py-1 border border-gray-100 focus:ring-2 focus:ring-indigo-500/20"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="mt-2 p-3 bg-gray-900 rounded-xl flex justify-between items-center">
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Global Stock</span>
+                                            <span className="text-sm font-black text-white">{formData.stock} Units</span>
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="block text-sm font-semibold text-gray-700 ml-1">Available Colors</label>
@@ -1230,10 +1569,10 @@ const Seller = () => {
                                     
                                     <div className="col-span-1 md:col-span-2 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center text-xl">🎨</div>
+                                            <div className="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center text-xl">✨</div>
                                             <div>
-                                                <p className="text-sm font-bold text-gray-900">Virtual Try-On (AR)</p>
-                                                <p className="text-xs text-gray-500 font-medium">Remove background and enable live fitting room for this product.</p>
+                                                <p className="text-sm font-bold text-gray-900">Smart Try-On</p>
+                                                <p className="text-xs text-gray-500 font-medium">Enable Smart fitting room for this product.</p>
                                             </div>
                                         </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
@@ -1737,6 +2076,12 @@ const Seller = () => {
                         </div>
                     )}
 
+                    {/* NOTIFICATIONS TAB */}
+                    {activeTab === "notifications" && renderNotifications()}
+
+                    {/* PAYMENTS TAB */}
+                    {activeTab === "payments" && renderPaymentHistory()}
+
                     {editingCoupon && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                             <div className="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-md animate-fade-in-up">
@@ -1837,21 +2182,54 @@ const Seller = () => {
                                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
                                             />
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Stock Quantity</label>
-                                            <input
-                                                type="number" value={editProductForm.stock}
-                                                onChange={(e) => setEditProductForm(prev => ({ ...prev, stock: e.target.value }))}
-                                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
-                                            />
+                                        <div className="col-span-1 md:col-span-2 space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Inventory by Size</label>
+                                                <button 
+                                                    type="button" onClick={handleEditAddSize}
+                                                    className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg"
+                                                >
+                                                    + Add Size
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                                {editProductForm.sizes.map((sizeObj, index) => (
+                                                    <div key={index} className="bg-gray-50 p-2 rounded-xl border border-gray-100 relative group">
+                                                        <button 
+                                                            type="button" onClick={() => handleEditRemoveSize(index)}
+                                                            className="absolute -top-1 -right-1 bg-white text-rose-500 w-5 h-5 rounded-full shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition border border-rose-100 text-[10px]"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                        <input 
+                                                            type="text" value={sizeObj.size} 
+                                                            onChange={(e) => handleEditSizeNameChange(index, e.target.value)}
+                                                            placeholder="Size"
+                                                            className="w-full bg-transparent border-b border-gray-200 focus:border-indigo-500 outline-none text-[10px] font-black mb-1 uppercase text-center"
+                                                        />
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <span className="text-[8px] font-bold text-gray-400">STOCK:</span>
+                                                            <input 
+                                                                type="number" value={sizeObj.stock} 
+                                                                onChange={(e) => handleEditSizeStockChange(index, e.target.value)}
+                                                                className="w-10 bg-white rounded text-center font-black text-[10px] py-0.5 border border-gray-100"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="mt-1 p-2 bg-gray-900 rounded-lg flex justify-between items-center px-4">
+                                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Total Global Stock</span>
+                                                <span className="text-xs font-black text-white">{editProductForm.stock} Units</span>
+                                            </div>
                                         </div>
                                         
                                         <div className="col-span-1 md:col-span-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center text-lg">🎨</div>
+                                                <div className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center text-lg">✨</div>
                                                 <div>
-                                                    <p className="text-xs font-bold text-gray-900">Virtual Try-On (AR)</p>
-                                                    <p className="text-[10px] text-gray-500 font-medium">Toggle live AR fitting for this product.</p>
+                                                    <p className="text-xs font-bold text-gray-900">Smart Try-On</p>
+                                                    <p className="text-[10px] text-gray-500 font-medium">Toggle Smart fitting for this product.</p>
                                                 </div>
                                             </div>
                                             <label className="relative inline-flex items-center cursor-pointer">

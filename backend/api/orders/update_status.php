@@ -21,7 +21,8 @@ $controller = new OrderController($db);
 $data = json_decode(file_get_contents("php://input"));
 
 if(!empty($data->order_id) && !empty($data->status)) {
-    $response = $controller->updateStatus($data->order_id, $data->status);
+    $tracking_number = $data->tracking_number ?? null;
+    $response = $controller->updateStatus($data->order_id, $data->status, $tracking_number);
     http_response_code($response['status']);
     echo json_encode($response['body']);
 } else {

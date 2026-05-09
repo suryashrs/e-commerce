@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import AuthGuardModal from "../components/AuthGuardModal";
 import ReviewSection from "../components/ReviewSection";
 import { fetchProduct } from "../services/api";
+import { Heart } from "lucide-react";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -25,14 +26,22 @@ const ProductDetail = () => {
   const [opacity, setOpacity] = useState(0.8);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
-  const [selectedSize, setSelectedSize] = useState("M");
-  const sizes = ["M", "L", "XL", "XXL", "4XL"];
+  const [selectedSize, setSelectedSize] = useState("");
 
   useEffect(() => {
     const loadProduct = async () => {
       try {
         const data = await fetchProduct(id);
         setProduct(data);
+        if (data.sizes && Array.isArray(data.sizes) && data.sizes.length > 0) {
+          // Find first size with stock, or just select first one if old format (string)
+          const firstAvailable = data.sizes.find(s => (typeof s === 'object' ? s.stock > 0 : true));
+          if (firstAvailable) {
+            setSelectedSize(typeof firstAvailable === 'object' ? firstAvailable.size : firstAvailable);
+          } else {
+            setSelectedSize(typeof data.sizes[0] === 'object' ? data.sizes[0].size : data.sizes[0]);
+          }
+        }
       } catch (error) {
         console.error("Failed to load product", error);
         setProduct({ error: true, message: error.response?.data?.message || "Product not found or unavailable." });
@@ -175,7 +184,7 @@ const ProductDetail = () => {
     <div className="max-w-7xl mx-auto">
       <Link
         to="/shop"
-        className="text-black hover:text-gray-600 mb-4 inline-block font-semibold"
+        className="text-black hover:text-gray-600 mb-2 inline-block font-bold text-xs uppercase tracking-widest"
       >
         &larr; Back to Shop
       </Link>
@@ -240,79 +249,93 @@ const ProductDetail = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Product Info */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-300">
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 mb-6">
+        <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100 flex flex-col h-full">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-2 mb-3 flex items-center justify-center overflow-hidden h-[300px]">
             <img
               src={product.image_url}
               alt={product.name}
-              className="w-full rounded-xl shadow-md"
+              className="max-h-full max-w-full object-contain rounded-lg shadow-sm"
             />
           </div>
-          <h1 className="text-4xl font-bold mb-3 text-black">
+          <h1 className="text-xl font-black mb-1 text-gray-900 tracking-tight leading-tight">
             {product.name}
           </h1>
-          <p className="text-gray-600 mb-6 text-lg">{product.description}</p>
-          <div className="flex items-center justify-between mb-6 pb-6 border-b-2 border-gray-200">
-            <span className="text-4xl font-bold text-black">
+          <p className="text-gray-400 mb-3 text-[10px] font-bold uppercase tracking-widest line-clamp-2">{product.description}</p>
+          <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-50">
+            <span className="text-xl font-black text-black">
               Rs {product.price}
             </span>
-            <span className="text-sm text-white bg-black px-4 py-2 rounded-full font-semibold shadow-md">
+            <span className="text-[9px] text-white bg-black px-2.5 py-1 rounded-full font-black uppercase tracking-widest shadow-sm">
               {product.category}
             </span>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-3">
             {product.stock > 0 ? (
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-                <span className="text-green-700 font-bold">
-                  In Stock ({product.stock} available)
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                <span className="text-green-700 text-[9px] font-black uppercase tracking-widest">
+                  Stock: {product.stock} Units
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-red-500 rounded-full"></span>
-                <span className="text-red-700 font-bold text-lg uppercase tracking-wider">
-                  Out of Stock
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                <span className="text-red-700 text-[9px] font-black uppercase tracking-widest">
+                  Sold Out
                 </span>
               </div>
             )}
           </div>
 
-          <div className="mb-8">
-            <label className="block font-bold text-lg mb-4">Select Size:</label>
-            <div className="flex flex-wrap gap-3">
-              {sizes.map((size) => (
-                <button
-                  key={size}
-                  onClick={() => setSelectedSize(size)}
-                  className={`px-6 py-2.5 rounded-xl font-bold transition-all border-2 ${
-                    selectedSize === size
-                      ? "bg-black text-white border-black shadow-md scale-105"
-                      : "bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+          <div className="mb-4">
+            <label className="block text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Select Size</label>
+            <div className="flex flex-wrap gap-1.5">
+              {Array.isArray(product.sizes) && product.sizes.map((s, index) => {
+                const sizeName = typeof s === 'object' ? s.size : s;
+                const sizeStock = typeof s === 'object' ? s.stock : product.stock;
+                const isOutOfStock = sizeStock <= 0;
+
+                return (
+                  <button
+                    key={index}
+                    disabled={isOutOfStock}
+                    onClick={() => setSelectedSize(sizeName)}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all border flex flex-col items-center min-w-[50px] ${
+                      selectedSize === sizeName
+                        ? "bg-black text-white border-black shadow-md"
+                        : isOutOfStock 
+                          ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed opacity-50"
+                          : "bg-white text-gray-500 border-gray-100 hover:border-black hover:text-black"
+                    }`}
+                  >
+                    <span>{sizeName}</span>
+                    {typeof s === 'object' && (
+                      <span className={`text-[7px] mt-0.5 ${selectedSize === sizeName ? "text-gray-400" : isOutOfStock ? "text-rose-300" : "text-gray-400"}`}>
+                        {isOutOfStock ? "OUT" : `${sizeStock} left`}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="flex items-center gap-4 mb-6">
-            <label className="font-bold text-lg">Quantity:</label>
-            <div className="flex items-center border-2 border-gray-300 rounded-xl overflow-hidden shadow-sm">
+          <div className="flex items-center gap-4 mb-4">
+            <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Qty:</label>
+            <div className="flex items-center border border-gray-100 rounded-lg overflow-hidden shadow-sm">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 font-bold text-black"
+                className="px-2.5 py-0.5 bg-gray-50 hover:bg-gray-100 font-bold text-black text-xs"
               >
                 -
               </button>
-              <span className="px-6 py-2 bg-white font-bold text-lg">
+              <span className="px-4 py-0.5 bg-white font-black text-xs">
                 {quantity}
               </span>
               <button
                 onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 font-bold text-black disabled:opacity-50"
+                className="px-2.5 py-0.5 bg-gray-50 hover:bg-gray-100 font-bold text-black disabled:opacity-50 text-xs"
                 disabled={quantity >= product.stock}
               >
                 +
@@ -334,54 +357,50 @@ const ProductDetail = () => {
             </div>
           )}
 
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <button
               onClick={handleAddToCart}
-              disabled={product.stock <= 0 || (viewMode === 'seller' || viewMode === 'admin')}
-              className={`flex-1 px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg ${
+              disabled={
+                product.stock <= 0 || 
+                (viewMode === 'seller' || viewMode === 'admin') ||
+                (Array.isArray(product.sizes) && product.sizes.find(s => (typeof s === 'object' ? s.size === selectedSize : s === selectedSize))?.stock <= 0)
+              }
+              className={`flex-1 px-6 py-2.5 rounded-lg font-black text-xs uppercase tracking-widest transition shadow-lg ${
                 product.stock > 0 && !(viewMode === 'seller' || viewMode === 'admin')
                   ? "bg-black text-white hover:bg-gray-800" 
                   : "bg-gray-300 text-gray-400 cursor-not-allowed"
               }`}
             >
-              {(viewMode === 'seller' || viewMode === 'admin') ? "🚫 Purchase disabled for Merchant" : (product.stock > 0 ? "🛒 Add to Cart" : "🚫 Out of Stock")}
+              {(viewMode === 'seller' || viewMode === 'admin') 
+                ? "Access Restricted" 
+                : (product.stock > 0 
+                  ? (Array.isArray(product.sizes) && product.sizes.find(s => typeof s === 'object' && s.size === selectedSize)?.stock <= 0)
+                    ? "Size Unavailable"
+                    : "Add to Cart" 
+                  : "Out of Stock")}
             </button>
             <button
               onClick={handleWishlistToggle}
-              className="px-6 py-4 bg-white border-2 border-black rounded-xl hover:bg-gray-50 transition shadow-lg"
+              className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:border-black transition shadow-sm"
               title={isInWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-7 w-7"
-                fill={isInWishlist(product.id) ? "currentColor" : "none"}
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-                style={{ color: isInWishlist(product.id) ? "#ef4444" : "#000" }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                />
-              </svg>
+              <Heart size={18} fill={isInWishlist(product.id) ? "#ef4444" : "none"} className={isInWishlist(product.id) ? "text-rose-500" : "text-black"} />
             </button>
           </div>
         </div>
 
         {/* Virtual Try-On */}
         {product.has_tryon === 1 ? (
-          <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-300">
-            <h2 className="text-3xl font-bold mb-6 text-black flex items-center gap-2">
-              🎨 Virtual Try-On
+          <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100 flex flex-col h-full">
+            <h2 className="text-xl font-black mb-4 text-black flex items-center gap-2 tracking-tight">
+              Smart Try-On
             </h2>
 
             {!showTryOn ? (
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 text-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-8 border border-gray-200">
-                  <div className="text-5xl mb-4">📸</div>
-                  <p className="text-gray-600 mb-4 font-medium">Try it on with your photo</p>
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="flex-1 text-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-100 transition-all hover:bg-white hover:shadow-md group">
+                  <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">📸</div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Try it on with your photo</p>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -391,18 +410,18 @@ const ProductDetail = () => {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full bg-black text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-800 transition shadow-md"
+                    className="w-full bg-black text-white px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-gray-800 transition shadow-sm"
                   >
                     Upload Photo
                   </button>
                 </div>
 
-                <div className="flex-1 text-center bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-8 border border-purple-200">
-                  <div className="text-5xl mb-4">✨</div>
-                  <p className="text-purple-900 mb-4 font-medium">Try it on in Live AR</p>
+                <div className="flex-1 text-center bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-100 transition-all hover:bg-white hover:shadow-md group">
+                  <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">✨</div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-purple-400 mb-3">Try it on in Live AR</p>
                   <button
                     onClick={() => window.location.href=`/try-on?product=${product.id}`}
-                    className="w-full bg-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-purple-700 transition shadow-md"
+                    className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-purple-700 transition shadow-sm"
                   >
                     Live Camera
                   </button>

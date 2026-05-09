@@ -132,7 +132,7 @@ const Navbar = () => {
     <nav className="bg-gradient-to-r from-black via-gray-900 to-gray-800 shadow-xl sticky top-0 z-50">
       <div className="container mx-auto px-4">
         {/* Main Header Row */}
-        <div className="flex justify-between items-center h-20">
+        <div className="flex justify-between items-center h-16">
           
           {/* Logo & Mobile Menu Toggle */}
           <div className="flex items-center gap-4">
@@ -144,10 +144,10 @@ const Navbar = () => {
             </button>
             <Link
               to="/"
-              className="text-2xl font-black text-white hover:text-gray-200 transition tracking-tighter italic flex items-center gap-2"
+              className="text-xl font-black text-white hover:text-gray-200 transition tracking-tighter italic flex items-center gap-2"
             >
               ✨ <span className="hidden sm:inline">WearItNow</span>
-              <span className="sm:hidden text-lg">WIN</span>
+              <span className="sm:hidden text-base">WIN</span>
             </Link>
           </div>
 
@@ -158,11 +158,11 @@ const Navbar = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search premium collections..."
-                className="w-full px-5 py-2.5 bg-white/10 text-white placeholder-gray-400 border border-white/20 rounded-full focus:outline-none focus:ring-2 focus:ring-white/50 shadow-md backdrop-blur-md transition-all text-sm"
+                placeholder="Search collections..."
+                className="w-full px-4 py-1.5 bg-white/10 text-white placeholder-gray-400 border border-white/20 rounded-full focus:outline-none focus:ring-2 focus:ring-white/50 shadow-md backdrop-blur-md transition-all text-xs"
               />
-              <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition">
-                <Search size={18} />
+              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition">
+                <Search size={16} />
               </button>
             </div>
           </form>
@@ -175,7 +175,7 @@ const Navbar = () => {
               onClick={() => setShowMobileSearch(!showMobileSearch)}
               className="lg:hidden text-white/80 hover:text-white transition"
             >
-              <Search size={22} />
+              <Search size={20} />
             </button>
 
             {/* Role Specific Quick Links (Desktop) */}
@@ -207,9 +207,9 @@ const Navbar = () => {
               {user && (
                 <div className="relative">
                   <button onClick={() => setShowNotifications(!showNotifications)} className="text-white/80 hover:text-white transition relative block">
-                    <Bell size={22} />
+                    <Bell size={20} />
                     {unreadCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-black shadow-lg">
+                      <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[8px] rounded-full h-4 w-4 flex items-center justify-center font-black shadow-lg">
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
@@ -246,8 +246,8 @@ const Navbar = () => {
             {user ? (
               <div className="relative">
                 <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center group">
-                  <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full border-2 border-white/30 group-hover:border-white transition overflow-hidden">
-                    <div className="h-full w-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
+                  <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border border-white/30 group-hover:border-white transition overflow-hidden">
+                    <div className="h-full w-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs sm:text-sm">
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                   </div>
@@ -301,14 +301,19 @@ const Navbar = () => {
 
         {/* Desktop Bottom Links (Hidden on Mobile, moved to Sidebar) */}
         <div className="hidden lg:flex justify-center space-x-12 pb-4">
-          {['Home', 'Shop', 'Thrift', 'Try-On'].map((item) => (
+          {[
+            { name: 'Home', path: '/' },
+            { name: 'Shop', path: '/shop' },
+            { name: 'Thrift', path: '/thrift' },
+            { name: 'Smart Try-On', path: '/try-on' }
+          ].map((item) => (
             <Link
-              key={item}
-              to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
-              className={`text-white/70 hover:text-white transition text-[11px] font-black uppercase tracking-[0.25em] relative group py-2 ${location.pathname === (item === 'Home' ? '/' : `/${item.toLowerCase()}`) ? 'text-white' : ''}`}
+              key={item.name}
+              to={item.path}
+              className={`text-white/70 hover:text-white transition text-[11px] font-black uppercase tracking-[0.25em] relative group py-2 ${location.pathname === item.path ? 'text-white' : ''}`}
             >
-              {item}
-              <span className={`absolute bottom-0 left-0 h-0.5 bg-white transition-all ${location.pathname === (item === 'Home' ? '/' : `/${item.toLowerCase()}`) ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+              {item.name}
+              <span className={`absolute bottom-0 left-0 h-0.5 bg-white transition-all ${location.pathname === item.path ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
             </Link>
           ))}
         </div>
@@ -331,7 +336,7 @@ const Navbar = () => {
                 { name: 'Home', path: '/' },
                 { name: 'Collections', path: '/shop' },
                 { name: 'Thrift Shop', path: '/thrift' },
-                { name: 'Virtual Try-On', path: '/try-on' },
+                { name: 'Smart Try-On', path: '/try-on' },
                 { name: 'My Wishlist', path: '/wishlist' }
               ].map((item) => (
                 <Link

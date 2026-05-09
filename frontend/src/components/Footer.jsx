@@ -17,29 +17,29 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-black text-white pt-20 pb-10 mt-20">
+    <footer className="bg-black text-white pt-10 pb-6 mt-10">
       <div className="container mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
           
           {/* Brand Column */}
-          <div className="space-y-6">
-            <Link to="/" className="text-3xl font-black italic tracking-tighter hover:opacity-80 transition">
+          <div className="space-y-4">
+            <Link to="/" className="text-2xl font-black italic tracking-tighter hover:opacity-80 transition">
               WearItNow
             </Link>
-            <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
-              Revolutionizing fashion with AI-powered virtual try-on. Wear your confidence with our curated premium collections.
+            <p className="text-gray-400 text-xs leading-relaxed max-w-xs">
+              Revolutionizing fashion with Smart-powered virtual try-on. Wear your confidence with our curated premium collections.
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {[
-                { icon: <Instagram size={18} />, label: 'Instagram' },
-                { icon: <Facebook size={18} />, label: 'Facebook' },
-                { icon: <Twitter size={18} />, label: 'Twitter' },
-                { icon: <Youtube size={18} />, label: 'Youtube' }
+                { icon: <Instagram size={16} />, label: 'Instagram' },
+                { icon: <Facebook size={16} />, label: 'Facebook' },
+                { icon: <Twitter size={16} />, label: 'Twitter' },
+                { icon: <Youtube size={16} />, label: 'Youtube' }
               ].map((social, i) => (
                 <a 
                   key={i}
                   href="#" 
-                  className="h-10 w-10 rounded-full border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:border-white transition-all duration-300"
+                  className="h-8 w-8 rounded-full border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:border-white transition-all duration-300"
                   aria-label={social.label}
                 >
                   {social.icon}
@@ -50,8 +50,8 @@ const Footer = () => {
 
           {/* Shop Column */}
           <div>
-            <h3 className="text-sm font-black uppercase tracking-widest mb-8 text-white">Collections</h3>
-            <ul className="space-y-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-white">Collections</h3>
+            <ul className="space-y-2">
               {[
                 { name: 'Latest Arrivals', path: '/shop' },
                 { name: 'Thrift Shop', path: '/thrift' },
@@ -62,9 +62,9 @@ const Footer = () => {
                 <li key={link.name}>
                   <Link 
                     to={link.path} 
-                    className="text-gray-400 hover:text-white transition flex items-center group text-sm font-medium"
+                    className="text-gray-400 hover:text-white transition flex items-center group text-xs font-medium"
                   >
-                    <ChevronRight size={14} className="mr-2 opacity-0 group-hover:opacity-100 -ml-4 group-hover:ml-0 transition-all" />
+                    <ChevronRight size={12} className="mr-1 opacity-0 group-hover:opacity-100 -ml-3 group-hover:ml-0 transition-all" />
                     {link.name}
                   </Link>
                 </li>
@@ -74,8 +74,8 @@ const Footer = () => {
 
           {/* Support Column */}
           <div>
-            <h3 className="text-sm font-black uppercase tracking-widest mb-8 text-white">Customer Care</h3>
-            <ul className="space-y-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-white">Customer Care</h3>
+            <ul className="space-y-2">
               {[
                 { name: 'Shipping Policy', path: '#' },
                 { name: 'Returns & Exchanges', path: '#' },
@@ -86,9 +86,9 @@ const Footer = () => {
                 <li key={link.name}>
                   <Link 
                     to={link.path} 
-                    className="text-gray-400 hover:text-white transition flex items-center group text-sm font-medium"
+                    className="text-gray-400 hover:text-white transition flex items-center group text-xs font-medium"
                   >
-                    <ChevronRight size={14} className="mr-2 opacity-0 group-hover:opacity-100 -ml-4 group-hover:ml-0 transition-all" />
+                    <ChevronRight size={12} className="mr-1 opacity-0 group-hover:opacity-100 -ml-3 group-hover:ml-0 transition-all" />
                     {link.name}
                   </Link>
                 </li>
@@ -98,37 +98,37 @@ const Footer = () => {
 
           {/* Newsletter Column */}
           <div>
-            <h3 className="text-sm font-black uppercase tracking-widest mb-8 text-white">Join the Circle</h3>
-            <p className="text-gray-400 text-sm mb-6 font-medium">
-              Subscribe to get special offers, free giveaways, and once-in-a-lifetime deals.
+            <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-white">Join the Circle</h3>
+            <p className="text-gray-400 text-xs mb-4 font-medium">
+              Subscribe for offers and deals.
             </p>
             <form className="relative group">
               <input 
                 type="email" 
                 placeholder="email@example.com"
-                className="w-full bg-gray-900 border border-gray-800 rounded-xl px-5 py-3.5 text-sm text-white focus:outline-none focus:border-white transition-all placeholder:text-gray-600"
+                className="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2.5 text-xs text-white focus:outline-none focus:border-white transition-all placeholder:text-gray-600"
               />
               <button 
                 type="submit"
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-white text-black rounded-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 bg-white text-black rounded-md flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
               >
-                <ArrowRight size={18} />
+                <ArrowRight size={16} />
               </button>
             </form>
-            <div className="mt-8 flex items-center gap-4 opacity-30 grayscale hover:opacity-60 transition duration-500">
-               <CreditCard size={32} />
-               <span className="text-[10px] font-black uppercase tracking-tighter">eSewa Verified</span>
+            <div className="mt-4 flex items-center gap-3 opacity-30 grayscale hover:opacity-60 transition duration-500">
+               <CreditCard size={24} />
+               <span className="text-[9px] font-black uppercase tracking-tighter">eSewa Verified</span>
             </div>
           </div>
 
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em]">
+        <div className="pt-6 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">
             &copy; {currentYear} WearItNow Studio. All rights reserved.
           </p>
-          <div className="flex items-center gap-8 text-[11px] font-black text-gray-500 uppercase tracking-widest">
+          <div className="flex items-center gap-6 text-[9px] font-black text-gray-500 uppercase tracking-widest">
             <Link to="#" className="hover:text-white transition">Terms</Link>
             <Link to="#" className="hover:text-white transition">Cookies</Link>
             <Link to="#" className="hover:text-white transition">Security</Link>

@@ -67,8 +67,12 @@ const ProductList = () => {
     if (selectedSize) {
       filtered = filtered.filter((p) => {
           if (!p.sizes) return false;
-          // Sizes are usually stored as comma-separated string from our earlier implementation
-          const sizesArray = p.sizes.split(',').map(s => s.trim().toUpperCase());
+          let sizesArray = [];
+          if (Array.isArray(p.sizes)) {
+              sizesArray = p.sizes.map(s => (typeof s === 'object' ? s.size : s).toUpperCase());
+          } else if (typeof p.sizes === 'string') {
+              sizesArray = p.sizes.split(',').map(s => s.trim().toUpperCase());
+          }
           return sizesArray.includes(selectedSize.toUpperCase());
       });
     }
@@ -107,16 +111,16 @@ const ProductList = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex justify-between items-start mb-4">
         <div>
-          <h2 className="text-4xl font-bold mb-2 text-black">
+          <h2 className="text-2xl font-black mb-1 text-black tracking-tight">
             {queryToUse
               ? `Search: "${queryToUse}"`
               : categoryParam
                 ? `${categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1)}`
                 : "All Products"}
           </h2>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">
             {filteredProducts.length} products found
           </p>
         </div>
@@ -137,14 +141,14 @@ const ProductList = () => {
       </div>
 
       {/* Horizontal Filter Bar */}
-      <div className="mb-10 bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
-          <div className="flex flex-wrap items-end gap-6 justify-between lg:justify-start">
+      <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-100 p-3">
+          <div className="flex flex-wrap items-end gap-4 justify-between lg:justify-start">
               
               {/* Search */}
               <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm font-bold text-gray-700 mb-2">Search</label>
                   <div className="relative">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 opacity-50">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 opacity-50 text-xs">
                           🔍
                       </span>
                       <input 
@@ -152,7 +156,7 @@ const ProductList = () => {
                           value={searchInput}
                           onChange={(e) => setSearchInput(e.target.value)}
                           placeholder="Search products..."
-                          className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 focus:border-black focus:ring-1 focus:ring-black outline-none transition-colors text-sm"
+                          className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none transition-colors text-xs"
                       />
                   </div>
               </div>
@@ -169,7 +173,7 @@ const ProductList = () => {
                               setSearchParams({});
                           }
                       }}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-sm appearance-none"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs appearance-none"
                   >
                       <option value="">All Categories</option>
                       <option value="Tops">Tops</option>
@@ -188,7 +192,7 @@ const ProductList = () => {
                   <select
                       value={selectedSize}
                       onChange={(e) => setSelectedSize(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-sm appearance-none"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs appearance-none"
                   >
                       <option value="">All Sizes</option>
                       <option value="S">S</option>
@@ -206,7 +210,7 @@ const ProductList = () => {
                   <select
                       value={selectedCollection}
                       onChange={(e) => setSelectedCollection(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-sm appearance-none"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs appearance-none"
                   >
                       <option value="">All Products</option>
                       <option value="New Arrivals">New Arrivals</option>
@@ -220,7 +224,7 @@ const ProductList = () => {
                   <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-sm appearance-none"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs appearance-none"
                   >
                       <option value="">Default</option>
                       <option value="price-low">Price: Low to High</option>
@@ -233,7 +237,7 @@ const ProductList = () => {
 
       <div className="w-full">
         {/* Products Grid - Fluid Responsive */}
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6">
             {filteredProducts.map((product) => (
               <div key={product.id} className="group relative">
                 <Link
@@ -264,18 +268,18 @@ const ProductList = () => {
                         <Heart size={16} fill={isInWishlist(product.id) ? "currentColor" : "none"} className={isInWishlist(product.id) ? "text-rose-500" : "text-black"} />
                       </button>
                     </div>
-                    <div className="p-3 sm:p-5 flex-grow flex flex-col">
-                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                    <div className="p-2 sm:p-4 flex-grow flex flex-col">
+                      <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-gray-400 mb-0.5">
                         {product.category}
                       </p>
-                      <h3 className="text-xs sm:text-lg font-bold text-gray-900 line-clamp-1 mb-2">
+                      <h3 className="text-[10px] sm:text-xs font-bold text-gray-900 line-clamp-1 mb-0.5">
                         {product.name}
                       </h3>
                       <div className="mt-auto flex justify-between items-end">
-                        <span className="text-sm sm:text-2xl font-black text-black">
+                        <span className="text-[11px] sm:text-sm font-black text-black">
                           Rs {product.price}
                         </span>
-                        <span className="hidden sm:block text-gray-400 text-xs font-black uppercase tracking-widest group-hover:text-black transition">
+                        <span className="hidden sm:block text-gray-400 text-[9px] font-black uppercase tracking-widest group-hover:text-black transition">
                           View →
                         </span>
                       </div>

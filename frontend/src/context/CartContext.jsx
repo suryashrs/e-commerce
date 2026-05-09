@@ -83,8 +83,17 @@ export const CartProvider = ({ children }) => {
         const existingInCart = cartItems.find(item => item.cartItemId === cartItemId);
         const currentQty = existingInCart ? existingInCart.quantity : 0;
 
-        if (currentQty + quantity > product.stock) {
-            setCartError(`Only ${product.stock} units available.`);
+        // Determine available stock for the specific size
+        let availableStock = product.stock;
+        if (Array.isArray(product.sizes)) {
+            const sizeInfo = product.sizes.find(s => typeof s === 'object' && s.size === size);
+            if (sizeInfo) {
+                availableStock = sizeInfo.stock;
+            }
+        }
+
+        if (currentQty + quantity > availableStock) {
+            setCartError(`Only ${availableStock} units available for size ${size}.`);
             return false;
         }
 
@@ -112,7 +121,14 @@ export const CartProvider = ({ children }) => {
         setCartItems(prevItems =>
             prevItems.map(item => {
                 if (item.cartItemId === cartItemId) {
-                    const newQty = Math.max(0, Math.min(quantity, item.stock));
+                    let availableStock = item.stock;
+                    if (Array.isArray(item.sizes)) {
+                        const sizeInfo = item.sizes.find(s => typeof s === 'object' && s.size === item.size);
+                        if (sizeInfo) {
+                            availableStock = sizeInfo.stock;
+                        }
+                    }
+                    const newQty = Math.max(0, Math.min(quantity, availableStock));
                     return { ...item, quantity: newQty };
                 }
                 return item;

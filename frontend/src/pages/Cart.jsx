@@ -116,8 +116,8 @@ const Cart = () => {
     }
 
     return (
-        <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-8">Shopping Cart</h2>
+        <div className="max-w-4xl mx-auto space-y-6">
+            <h2 className="text-2xl font-black tracking-tight">Shopping Cart</h2>
             
             {cartError && (
                 <div className="mb-6 mx-auto p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl font-medium flex justify-between items-center animate-shake max-w-4xl">
@@ -133,38 +133,38 @@ const Cart = () => {
             )}
 
             {(user?.role === 'seller' || user?.role === 'admin') && (
-                <div className="mb-8 p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="p-5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl shadow-sm">
                     <div className="flex gap-4 items-start">
-                        <div className="bg-amber-100 p-3 rounded-xl text-2xl">🚧</div>
+                        <div className="bg-amber-100 p-2 rounded-lg text-lg">🚧</div>
                         <div>
-                            <h3 className="text-lg font-black text-amber-900 leading-tight">Purchasing Restricted for Merchant Accounts</h3>
-                            <p className="text-amber-800/80 text-sm mt-1 font-medium">To maintain platform integrity, seller and admin accounts are prohibited from making purchases. Please create or use a separate buyer account for shopping.</p>
+                            <h3 className="text-sm font-black text-amber-900 leading-tight uppercase tracking-widest">Restricted Account</h3>
+                            <p className="text-amber-800/80 text-[11px] mt-1 font-medium leading-relaxed">Seller and admin accounts are prohibited from making purchases. Please use a separate buyer account for shopping.</p>
                         </div>
                     </div>
                 </div>
             )}
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 {cartItems.filter(item => !item.is_flagged).map(item => (
-                    <div key={item.id} className="flex items-center p-6 border-b border-gray-100 last:border-0">
-                        <img src={item.image_url} alt={item.name} className="w-24 h-24 object-cover rounded-lg" />
-                        <div className="ml-6 flex-grow">
-                            <h3 className="text-lg font-semibold">{item.name}</h3>
-                            <div className="flex items-center gap-2 mt-1">
-                                <p className="text-gray-500 text-sm">{item.category}</p>
-                                <span className="text-gray-300">|</span>
-                                <p className="text-black text-sm font-bold">Size: {item.size}</p>
+                    <div key={item.id} className="flex items-center p-4 border-b border-gray-100 last:border-0">
+                        <img src={item.image_url} alt={item.name} className="w-16 h-16 object-cover rounded-lg" />
+                        <div className="ml-4 flex-grow">
+                            <h3 className="text-sm font-bold text-gray-900">{item.name}</h3>
+                            <div className="flex items-center gap-2">
+                                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">{item.category}</p>
+                                <span className="text-gray-200">|</span>
+                                <p className="text-gray-900 text-[10px] font-black uppercase tracking-widest">Size: {item.size}</p>
                             </div>
-                            <p className="text-accent font-semibold mt-1">Rs {item.price}</p>
+                            <p className="text-black font-black text-xs mt-0.5">Rs {item.price}</p>
                         </div>
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center border rounded-lg">
-                                <button onClick={() => updateQuantity(item.cartItemId, item.quantity - 1)} className="px-3 py-2 hover:bg-gray-100">-</button>
-                                <span className="px-4 py-2 border-x">{item.quantity}</span>
-                                <button onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)} className="px-3 py-2 hover:bg-gray-100">+</button>
+                            <div className="flex items-center border border-gray-100 rounded-lg overflow-hidden">
+                                <button onClick={() => updateQuantity(item.cartItemId, item.quantity - 1)} className="px-2 py-1 bg-gray-50 hover:bg-gray-100 text-xs">-</button>
+                                <span className="px-3 py-1 text-xs font-bold">{item.quantity}</span>
+                                <button onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)} className="px-2 py-1 bg-gray-50 hover:bg-gray-100 text-xs">+</button>
                             </div>
-                            <button onClick={() => removeFromCart(item.cartItemId)} className="text-red-500 hover:text-red-700 ml-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <button onClick={() => removeFromCart(item.cartItemId)} className="text-gray-400 hover:text-rose-500 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                             </button>

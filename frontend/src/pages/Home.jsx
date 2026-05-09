@@ -7,21 +7,21 @@ import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 // Hero carousel slides with curated fashion imagery
 const heroSlides = [
   {
-    image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop",
+    image: "/assets/images/hero1.jpg",
     tag: "New Arrivals",
     headline: "Dress to\nImpress",
-    sub: "AI-powered virtual try-on. Style without limits.",
+    sub: "Smart virtual try-on. Style without limits.",
     cta: { label: "Shop Now", to: "/shop" },
   },
   {
-    image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=2070&auto=format&fit=crop",
+    image: "/assets/images/hero2.jpg",
     tag: "Virtual Try-On",
     headline: "See It On\nYou First",
     sub: "Try before you buy — no returns, just confidence.",
     cta: { label: "Try It Now", to: "/try-on" },
   },
   {
-    image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop",
+    image: "/assets/images/hero3.jpg",
     tag: "Thrift Finds",
     headline: "Preloved.\nPerfect.",
     sub: "Sustainable fashion at its finest — curated vintage pieces.",
@@ -75,7 +75,7 @@ const Home = () => {
     <div className="space-y-8 sm:space-y-16">
 
       {/* ── Hero Carousel ── */}
-      <section className="relative rounded-2xl sm:rounded-3xl overflow-hidden mx-[-1rem] sm:mx-0 shadow-2xl" style={{ height: 'clamp(360px, 60vh, 620px)' }}>
+      <section className="relative rounded-xl sm:rounded-2xl overflow-hidden mx-[-1rem] sm:mx-0 shadow-2xl" style={{ height: 'clamp(320px, 50vh, 500px)' }}>
 
         {/* Slides */}
         {heroSlides.map((s, i) => (
@@ -99,7 +99,7 @@ const Home = () => {
           </span>
           <h1
             key={`h-${currentSlide}`}
-            className="text-4xl sm:text-7xl font-black text-white leading-none tracking-tighter mb-6 whitespace-pre-line animate-in fade-in slide-in-from-bottom-4 duration-500"
+            className="text-3xl sm:text-5xl font-black text-white leading-none tracking-tighter mb-4 whitespace-pre-line animate-in fade-in slide-in-from-bottom-4 duration-500"
           >
             {slide.headline}
           </h1>
@@ -109,16 +109,16 @@ const Home = () => {
           >
             {slide.sub}
           </p>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-3">
             <Link
               to={slide.cta.to}
-              className="bg-white text-black px-7 py-3.5 rounded-full font-black hover:bg-gray-100 transition shadow-xl text-sm sm:text-base"
+              className="bg-white text-black px-5 py-2.5 rounded-full font-black hover:bg-gray-100 transition shadow-xl text-xs sm:text-sm"
             >
               {slide.cta.label}
             </Link>
             <Link
               to="/try-on"
-              className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-7 py-3.5 rounded-full font-black hover:bg-white hover:text-black transition text-sm sm:text-base"
+              className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-5 py-2.5 rounded-full font-black hover:bg-white hover:text-black transition text-xs sm:text-sm"
             >
               Virtual Try-On ✨
             </Link>
@@ -162,16 +162,16 @@ const Home = () => {
 
       {/* ── Featured Styles ── */}
       <section className="px-1 sm:px-0">
-        <div className="flex justify-between items-end mb-8">
-          <h2 className="text-2xl sm:text-4xl font-black text-black tracking-tight">
+        <div className="flex justify-between items-end mb-6">
+          <h2 className="text-xl sm:text-2xl font-black text-black tracking-tight">
             Featured Styles
           </h2>
-          <Link to="/shop" className="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-400 hover:text-black transition flex items-center gap-2 mb-1">
+          <Link to="/shop" className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400 hover:text-black transition flex items-center gap-2 mb-1">
             View All <span>→</span>
           </Link>
         </div>
         
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-8 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6 mb-8">
           {featuredProducts.map((product) => (
             <div key={product.id} className="group relative">
               <Link
@@ -207,15 +207,15 @@ const Home = () => {
                       </div>
                     )}
                   </div>
-                  <div className="p-3 sm:p-5 flex-grow flex flex-col">
-                    <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                  <div className="p-2 sm:p-4 flex-grow flex flex-col">
+                    <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-gray-400 mb-0.5">
                       {product.category}
                     </p>
-                    <h3 className="text-xs sm:text-lg font-bold text-gray-900 line-clamp-1 mb-2">
+                    <h3 className="text-[10px] sm:text-xs font-bold text-gray-900 line-clamp-1 mb-0.5">
                       {product.name}
                     </h3>
                     <div className="mt-auto">
-                      <span className="text-sm sm:text-2xl font-black text-black">
+                      <span className="text-[11px] sm:text-sm font-black text-black">
                         Rs {product.price}
                       </span>
                     </div>
