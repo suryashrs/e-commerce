@@ -202,6 +202,53 @@ class NotificationService {
     }
 
     /**
+     * Notification for Seller about a New Return Request
+     */
+    public static function sendReturnRequestSellerEmail($email, $orderId) {
+        $subject = "New Return Request - Order #$orderId";
+        $body = self::getTemplate("
+            <h2 style='color: #18181b;'>New Return Request!</h2>
+            <p>You have received a new return request for order <strong>#$orderId</strong>.</p>
+            <p>Please log in to your dashboard to review and approve/reject the request.</p>
+            <div style='text-align: center; margin: 30px 0;'>
+                <a href='http://localhost:5173/seller' style='background: #18181b; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600;'>View Dashboard</a>
+            </div>
+        ");
+        return self::send($email, $subject, $body);
+    }
+
+    /**
+     * Notification for Buyer about Return Request Status Update
+     */
+    public static function sendReturnStatusBuyerEmail($email, $orderId, $status) {
+        $subject = "Update on Return Request - Order #$orderId";
+        
+        $statusColor = '#18181b';
+        $statusMessage = "Your return request status has been updated to: <strong>$status</strong>.";
+
+        if (strtolower($status) === 'approved') {
+            $statusColor = '#10b981';
+            $statusMessage = "Great news! Your return request for order <strong>#$orderId</strong> has been approved. The seller will process your refund shortly.";
+        } elseif (strtolower($status) === 'refunded') {
+            $statusColor = '#3b82f6';
+            $statusMessage = "Your refund for order <strong>#$orderId</strong> has been successfully processed.";
+        } elseif (strtolower($status) === 'rejected') {
+            $statusColor = '#ef4444';
+            $statusMessage = "Your return request for order <strong>#$orderId</strong> has been rejected by the seller.";
+        }
+
+        $body = self::getTemplate("
+            <h2 style='color: $statusColor;'>Return Request $status</h2>
+            <p>$statusMessage</p>
+            <p>You can track your return details in your account.</p>
+            <div style='text-align: center; margin: 30px 0;'>
+                <a href='http://localhost:5173/orders' style='background: #18181b; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600;'>View Orders</a>
+            </div>
+        ");
+        return self::send($email, $subject, $body);
+    }
+
+    /**
      * Base Template for Emails
      */
     private static function getTemplate($content) {

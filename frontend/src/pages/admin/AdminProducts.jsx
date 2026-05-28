@@ -138,7 +138,7 @@ const AdminProducts = () => {
                                                 className={`p-3 rounded-xl transition shadow-lg flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${
                                                     product.is_flagged 
                                                     ? 'bg-emerald-500 text-white hover:bg-emerald-600' 
-                                                    : 'bg-amber-500 text-white hover:bg-amber-600'
+                                                    : 'bg-black text-white hover:bg-zinc-800'
                                                 }`}
                                                 title={product.is_flagged ? "Unflag Item" : "Flag Violation"}
                                             >

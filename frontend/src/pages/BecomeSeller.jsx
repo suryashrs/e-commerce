@@ -13,6 +13,7 @@ const BecomeSeller = () => {
     const [showPopup, setShowPopup] = useState(false);
     
     // New fields
+    const [email, setEmail] = useState('');
     const [shopName, setShopName] = useState('');
     const [shopNumber, setShopNumber] = useState('');
     const [shopAddress, setShopAddress] = useState('');
@@ -21,14 +22,22 @@ const BecomeSeller = () => {
     useEffect(() => {
         if (!user) {
             navigate('/login');
-        } else if (user.role === 'seller' && user.shop_status === 'approved') {
-            navigate('/seller');
+        } else {
+            setEmail(user.email || '');
+            if (user.role === 'seller' && user.shop_status === 'approved') {
+                navigate('/seller');
+            }
         }
     }, [user, navigate]);
 
     const handleBecomeSeller = async () => {
-        if (!shopName || !shopNumber || !shopAddress || !shopPhone) {
-            setError('Please fill in all shop details.');
+        if (!shopName || !shopNumber || !shopAddress || !shopPhone || !email) {
+            setError('Please fill in all details, including email.');
+            return;
+        }
+
+        if (email.trim().toLowerCase() === user.email.trim().toLowerCase()) {
+            setError('Email address is same. Please enter a different email to be a seller.');
             return;
         }
 
@@ -40,6 +49,7 @@ const BecomeSeller = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     user_id: user.id,
+                    email: email,
                     shop_name: shopName,
                     shop_number: shopNumber,
                     shop_address: shopAddress,
@@ -56,6 +66,7 @@ const BecomeSeller = () => {
                     ...user, 
                     role: 'seller', 
                     shop_status: 'pending',
+                    email: data.email || email,
                     shop_name: shopName,
                     shop_number: shopNumber,
                     shop_address: shopAddress,
@@ -133,12 +144,12 @@ const BecomeSeller = () => {
                             </div>
 
                             <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Email Address</label>
+                                <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-3">Email Address</label>
                                 <input 
                                     type="email" 
-                                    value={user.email} 
-                                    readOnly 
-                                    className="w-full bg-gray-50 border-2 border-transparent rounded-[1.2rem] px-6 py-4 font-bold text-gray-400 outline-none cursor-not-allowed"
+                                    value={email} 
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-[1.2rem] px-6 py-4 font-bold text-gray-900 transition-all outline-none"
                                 />
                             </div>
 

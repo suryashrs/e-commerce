@@ -28,6 +28,7 @@ const Signup = () => {
     const timerRef = useRef(null);
 
     const [error, setError] = useState("");
+    const [conflictType, setConflictType] = useState(null);
     const [successMsg, setSuccessMsg] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -78,6 +79,11 @@ const Signup = () => {
             startResendTimer();
         } else {
             setError(result.error);
+            if (result.conflict === 'buyer_to_seller') {
+                setConflictType('buyer_to_seller');
+            } else {
+                setConflictType(null);
+            }
         }
     };
 
@@ -195,7 +201,37 @@ const Signup = () => {
                                 <p className="text-gray-500">Start your journey with WearItNow</p>
                             </div>
 
-                            {error && (
+                            {conflictType === 'buyer_to_seller' ? (
+                                <div className="bg-amber-50 border border-amber-200 p-6 rounded-2xl mb-6 text-gray-900 animate-in fade-in zoom-in-95 duration-300 text-left">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <span className="text-xl">⚠️</span>
+                                        <h3 className="text-lg font-black tracking-tight text-amber-800">Account Conflict</h3>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+                                        This email address is already linked to an active Buyer account. To sell on our platform, you cannot create a duplicate account with the same email.
+                                    </p>
+                                    
+                                    <div className="space-y-3 font-sans">
+                                        <Link 
+                                            to={`/login?email=${encodeURIComponent(email)}&redirect=/become-seller`}
+                                            className="w-full flex items-center justify-center py-3.5 px-4 bg-black hover:bg-zinc-800 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-black/20 transition duration-200 text-center"
+                                        >
+                                            Upgrade My Account
+                                        </Link>
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                setConflictType(null);
+                                                setError("");
+                                                setEmail("");
+                                            }}
+                                            className="w-full flex items-center justify-center py-3.5 px-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs uppercase tracking-widest rounded-xl transition duration-200 text-center"
+                                        >
+                                            Use a Different Email
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : error && (
                                 <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md mb-6" role="alert">
                                     <p className="font-bold">Error</p>
                                     <p>{error}</p>
@@ -211,7 +247,7 @@ const Signup = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                                    <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(""); setConflictType(null); }}
                                         className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition duration-200 outline-none"
                                         placeholder="Email Address" autoComplete="off" required />
                                 </div>
@@ -263,11 +299,11 @@ const Signup = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">I want to be a</label>
                                     <div className="flex space-x-4">
                                         <label className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all flex-1 ${role === 'buyer' ? 'border-black bg-gray-50' : 'hover:bg-gray-50'}`}>
-                                            <input type="radio" name="role" value="buyer" checked={role === 'buyer'} onChange={(e) => setRole(e.target.value)} className="h-4 w-4 text-black focus:ring-black border-gray-300" />
+                                            <input type="radio" name="role" value="buyer" checked={role === 'buyer'} onChange={(e) => { setRole(e.target.value); setError(""); setConflictType(null); }} className="h-4 w-4 text-black focus:ring-black border-gray-300" />
                                             <span className="ml-2 font-medium">Buyer</span>
                                         </label>
                                         <label className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all flex-1 ${role === 'seller' ? 'border-black bg-gray-50' : 'hover:bg-gray-50'}`}>
-                                            <input type="radio" name="role" value="seller" checked={role === 'seller'} onChange={(e) => setRole(e.target.value)} className="h-4 w-4 text-black focus:ring-black border-gray-300" />
+                                            <input type="radio" name="role" value="seller" checked={role === 'seller'} onChange={(e) => { setRole(e.target.value); setError(""); setConflictType(null); }} className="h-4 w-4 text-black focus:ring-black border-gray-300" />
                                             <span className="ml-2 font-medium">Seller</span>
                                         </label>
                                     </div>

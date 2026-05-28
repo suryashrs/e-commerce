@@ -116,7 +116,7 @@ const Dashboard = () => {
                                 <p className="text-gray-400 text-sm">There are <span className="text-white font-bold">{stats.pending_shops}</span> merchant shops waiting for global approval.</p>
                                 <button 
                                     onClick={() => handleAction('approve', 'Merchant Approval')}
-                                    className="w-full py-4 bg-amber-400 text-black rounded-2xl font-black text-xs hover:bg-amber-300 transition shadow-xl"
+                                    className="w-full py-4 bg-black text-white rounded-2xl font-black text-xs hover:bg-zinc-800 transition shadow-xl"
                                 >
                                     Open Approval Queue
                                 </button>

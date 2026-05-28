@@ -61,6 +61,12 @@ class AuthController {
 
             // Check if email already exists
             if($this->user->emailExists()){
+                if ($role === 'seller' && $this->user->role === 'buyer') {
+                    return array("status" => 409, "body" => array(
+                        "message" => "This email is already registered as a buyer account. If you want to become a seller, please log in and upgrade your current profile, or use a different email address to create a separate seller account.",
+                        "conflict" => "buyer_to_seller"
+                    ));
+                }
                 return array("status" => 409, "body" => array("message" => "Account already exists with this email."));
             }
 

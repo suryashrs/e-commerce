@@ -20,8 +20,8 @@ $user_id = isset($_GET['user_id']) ? $_GET['user_id'] : die();
 
 // Updated query to fetch orders with items and product details
 $query = "SELECT o.id, o.total_amount, o.status, o.created_at, 
-          oi.product_id, oi.quantity, oi.price as item_price, 
-          p.name as product_name, p.image_url, p.is_flagged
+          oi.id as order_item_id, oi.product_id, oi.quantity, oi.price as item_price, 
+          p.name as product_name, p.image_url, p.is_flagged, p.seller_id
           FROM orders o 
           LEFT JOIN order_items oi ON o.id = oi.order_id
           LEFT JOIN products p ON oi.product_id = p.id
@@ -49,6 +49,8 @@ while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
     
     if($row['product_id']){
         array_push($orders[$order_id]['items'], array(
+            "order_item_id" => $row['order_item_id'],
+            "seller_id" => $row['seller_id'],
             "product_id" => $row['product_id'],
             "product_name" => $row['product_name'],
             "image_url" => $row['image_url'],

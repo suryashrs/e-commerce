@@ -20,7 +20,10 @@ import {
     Star,
     Bell,
     Trash2,
-    MessageSquare as MessageIcon
+    MessageSquare as MessageIcon,
+    RotateCcw,
+    CheckCircle,
+    XOctagon
 } from 'lucide-react';
 import { 
     Chart as ChartJS, 
@@ -34,6 +37,7 @@ import {
     Filler
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import PopupModal from '../components/PopupModal';
 
 ChartJS.register(
     CategoryScale,
@@ -56,12 +60,17 @@ const Seller = () => {
     const getInitialTab = () => {
         const params = new URLSearchParams(location.search);
         const tab = params.get('tab');
-        if (tab && ['overview', 'products', 'add-product', 'coupons', 'orders', 'reviews', 'payments', 'profile'].includes(tab)) return tab;
+        if (tab && ['overview', 'products', 'add-product', 'coupons', 'orders', 'reviews', 'payments', 'refunds', 'profile'].includes(tab)) return tab;
         return "overview";
     };
 
     const [activeTab, setActiveTab] = useState(getInitialTab);
+    const [popupConfig, setPopupConfig] = useState({ isOpen: false, message: '', type: 'info' });
     const [sellerOrders, setSellerOrders] = useState([]);
+
+    const showPopup = (message, type = 'info') => {
+        setPopupConfig({ isOpen: true, message, type });
+    };
     const [notifications, setNotifications] = useState([]);
     const [paymentHistory, setPaymentHistory] = useState([]);
     const [paymentsLoading, setPaymentsLoading] = useState(false);
@@ -112,6 +121,11 @@ const Seller = () => {
 
     // Product List State
     const [sellerProducts, setSellerProducts] = useState([]);
+
+    // Refund state
+    const [refundRequests, setRefundRequests] = useState([]);
+    const [refundFilter, setRefundFilter] = useState('all');
+    const [refundLoading, setRefundLoading] = useState(false);
     
     // Review List State
     const [sellerReviews, setSellerReviews] = useState([]);
@@ -273,7 +287,45 @@ const Seller = () => {
         if (activeTab === "reviews" && user) {
             fetchSellerReviews();
         }
+        if (activeTab === "refunds" && user) {
+            fetchRefundRequests();
+        }
     }, [activeTab, user]);
+
+    const fetchRefundRequests = async () => {
+        setRefundLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/returns/read_by_seller.php?seller_id=${user.id}`);
+            const data = await res.json();
+            if (res.ok && data.status === 200) {
+                setRefundRequests(data.body || []);
+            }
+        } catch (err) {
+            console.error("Failed to fetch refund requests", err);
+        } finally {
+            setRefundLoading(false);
+        }
+    };
+
+    const handleRefundAction = async (requestId, newStatus) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/returns/update_status.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: requestId, status: newStatus })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                const label = newStatus === 'refunded' ? 'marked as Refunded' : newStatus;
+                showPopup(`Return request ${label} successfully!`, 'success');
+                fetchRefundRequests();
+            } else {
+                showPopup(data.message || 'Failed to update refund status', 'error');
+            }
+        } catch (err) {
+            showPopup('Network error. Please try again.', 'error');
+        }
+    };
 
     const handleOrderStatusUpdate = async (orderId, newStatus) => {
         try {
@@ -287,9 +339,9 @@ const Seller = () => {
                 // Refresh orders
                 fetchSellerOrders();
                 // Pop up for the seller
-                alert(`Order #${orderId} has been marked as ${newStatus}! Notification sent to buyer.`);
+                showPopup(`Order #${orderId} has been marked as ${newStatus}! Notification sent to buyer.`, 'success');
             } else {
-                alert(data.message || 'Failed to update order status');
+                showPopup(data.message || 'Failed to update order status', 'error');
             }
         } catch (err) {
             console.error("Failed to update status", err);
@@ -308,7 +360,7 @@ const Seller = () => {
             const data = await res.json();
             if (data.status === 200) {
                 updateUser(data.body);
-                alert("Profile updated successfully!");
+                showPopup("Profile updated successfully!", "success");
             }
         } catch (err) {
             console.error("Update failed", err);
@@ -469,7 +521,7 @@ const Seller = () => {
                 setReplyingTo(null);
                 setReplyText("");
                 fetchSellerReviews();
-                alert("Reply posted successfully!");
+                showPopup("Reply posted successfully!", "success");
             }
         } catch (error) {
             console.error("Failed to post reply", error);
@@ -490,11 +542,11 @@ const Seller = () => {
             if (response.ok) {
                 setSellerProducts(prev => prev.filter(p => p.id !== productId));
             } else {
-                alert(result.message || "Failed to delete product.");
+                showPopup(result.message || "Failed to delete product.", "error");
             }
         } catch (error) {
             console.error("Error deleting product:", error);
-            alert("An error occurred while deleting the product.");
+            showPopup("An error occurred while deleting the product.", "error");
         }
     };
 
@@ -562,7 +614,7 @@ const Seller = () => {
         const file = e.target.files[0];
         if (file) {
             if (!file.type.startsWith("image/")) {
-                alert("Please upload a valid image file (PNG, JPG, WEBP). PDF and other files are not allowed.");
+                showPopup("Please upload a valid image file (PNG, JPG, WEBP). PDF and other files are not allowed.", "error");
                 e.target.value = "";
                 return;
             }
@@ -1181,7 +1233,13 @@ const Seller = () => {
     );
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC]">
+        <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+            <PopupModal 
+                isOpen={popupConfig.isOpen} 
+                message={popupConfig.message} 
+                type={popupConfig.type} 
+                onClose={() => setPopupConfig({ ...popupConfig, isOpen: false })} 
+            />
             {/* Background Accent */}
             <div className="fixed top-0 left-0 w-full h-96 bg-gradient-to-b from-gray-200 to-transparent opacity-30 pointer-events-none z-0"></div>
 
@@ -1202,6 +1260,7 @@ const Seller = () => {
                             { id: 'coupons', icon: '🎟️', label: 'Coupons' },
                             { id: 'orders', icon: '📝', label: 'Fulfillment' },
                             { id: 'payments', icon: '💰', label: 'Earnings' },
+                            { id: 'refunds', icon: '↩️', label: 'Refunds' },
                             { id: 'reviews', icon: '⭐', label: 'Reviews' },
                             { id: 'profile', icon: '👤', label: 'Profile' }
                         ].map(tab => (
@@ -1243,6 +1302,7 @@ const Seller = () => {
                     { id: 'coupons', icon: '🎟️', label: 'Coupons' },
                     { id: 'orders', icon: '📝', label: 'Orders' },
                     { id: 'payments', icon: '💰', label: 'Earnings' },
+                    { id: 'refunds', icon: '↩️', label: 'Refunds' },
                     { id: 'reviews', icon: '⭐', label: 'Reviews' },
                     { id: 'profile', icon: '👤', label: 'Profile' }
                 ].map(tab => (
@@ -2081,6 +2141,117 @@ const Seller = () => {
 
                     {/* PAYMENTS TAB */}
                     {activeTab === "payments" && renderPaymentHistory()}
+
+                    {/* REFUNDS TAB */}
+                    {activeTab === "refunds" && (
+                        <div className="space-y-6 animate-fade-in-up">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-2xl font-black text-gray-900 tracking-tight">Refund Requests</h2>
+                                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">Manage customer return and refund requests</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    {['all', 'pending', 'approved', 'refunded', 'rejected'].map(f => (
+                                        <button
+                                            key={f}
+                                            onClick={() => setRefundFilter(f)}
+                                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                                                refundFilter === f
+                                                    ? 'bg-amber-500 text-white shadow-md'
+                                                    : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            {f}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {refundLoading ? (
+                                <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
+                                    <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Loading Refund Requests...</p>
+                                </div>
+                            ) : refundRequests.filter(r => refundFilter === 'all' || r.status === refundFilter).length === 0 ? (
+                                <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
+                                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <RotateCcw size={28} className="text-gray-300" />
+                                    </div>
+                                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No refund requests found</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {refundRequests
+                                        .filter(r => refundFilter === 'all' || r.status === refundFilter)
+                                        .map(req => (
+                                        <div key={req.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-all">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div>
+                                                        <h3 className="font-black text-gray-900 text-sm">Order #{req.order_id.toString().slice(0,8)}</h3>
+                                                        <span className={`inline-block mt-1 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                                            req.status === 'pending' ? 'bg-amber-100 text-amber-600' :
+                                                            req.status === 'approved' ? 'bg-blue-100 text-blue-600' :
+                                                            req.status === 'refunded' ? 'bg-green-100 text-green-600' :
+                                                            'bg-red-100 text-red-600'
+                                                        }`}>{req.status}</span>
+                                                    </div>
+                                                </div>
+                                                {req.product_image && (
+                                                    <img src={req.product_image} alt={req.product_name} className="w-16 h-16 rounded-xl object-cover border border-gray-100 shadow-sm" />
+                                                )}
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-x-6 gap-y-1 mb-4 text-sm">
+                                                <p><span className="font-bold text-gray-700">Product:</span> <span className="text-gray-600">{req.product_name}</span></p>
+                                                <p><span className="font-bold text-gray-700">Buyer:</span> <span className="text-gray-600">{req.buyer_name || req.buyer_username}</span></p>
+                                                <p><span className="font-bold text-gray-700">Amount:</span> <span className="text-gray-900 font-black">Rs. {(parseFloat(req.price || 0) * parseInt(req.quantity || 1)).toFixed(2)}</span></p>
+                                                <p><span className="font-bold text-gray-700">Requested:</span> <span className="text-gray-600">{new Date(req.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></p>
+                                            </div>
+
+                                            <div className="border-t border-gray-50 pt-4 mb-4">
+                                                <p className="text-sm text-gray-700"><span className="font-bold">Reason:</span> {req.reason}</p>
+                                            </div>
+
+                                            <div className="flex gap-3">
+                                                {req.status === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleRefundAction(req.id, 'approved')}
+                                                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-xs font-black uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-green-200 active:scale-95"
+                                                        >
+                                                            <CheckCircle size={14} /> Approve
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleRefundAction(req.id, 'rejected')}
+                                                            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white text-xs font-black uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-red-200 active:scale-95"
+                                                        >
+                                                            <XOctagon size={14} /> Reject
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {req.status === 'approved' && (
+                                                    <button
+                                                        onClick={() => handleRefundAction(req.id, 'refunded')}
+                                                        className="flex items-center gap-2 bg-black hover:bg-zinc-800 text-white text-xs font-black uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all shadow-md active:scale-95"
+                                                    >
+                                                        <RotateCcw size={14} /> Mark as Refunded
+                                                    </button>
+                                                )}
+                                                {(req.status === 'refunded' || req.status === 'rejected') && (
+                                                    <span className={`flex items-center gap-2 text-xs font-black uppercase tracking-widest px-5 py-2.5 rounded-xl ${
+                                                        req.status === 'refunded' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-500 border border-red-200'
+                                                    }`}>
+                                                        {req.status === 'refunded' ? <><CheckCircle size={14}/> Refunded</> : <><XOctagon size={14}/> Rejected</>}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {editingCoupon && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">

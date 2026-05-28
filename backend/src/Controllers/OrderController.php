@@ -29,7 +29,7 @@ class OrderController {
         }
 
         if(
-            !empty($data->total_amount) &&
+            isset($data->total_amount) &&
             !empty($data->items) &&
             is_array($data->items)
         ){
@@ -72,24 +72,35 @@ class OrderController {
                 }
 
                 foreach($seller_totals as $sid => $total) {
-                    $this->transaction->seller_id = $sid;
-                    $this->transaction->order_id = $order_id;
-                    $this->transaction->amount = $total;
-                    $this->transaction->platform_commission = $total * 0.10; // 10% commission per product total
-                    $this->transaction->create();
+                    try {
+                        // Validate seller exists to prevent foreign key constraint failures
+                        $check_seller = "SELECT id FROM users WHERE id = ?";
+                        $chk_stmt = $this->db->prepare($check_seller);
+                        $chk_stmt->execute([$sid]);
+                        
+                        if ($chk_stmt->rowCount() > 0) {
+                            $this->transaction->seller_id = $sid;
+                            $this->transaction->order_id = $order_id;
+                            $this->transaction->amount = $total;
+                            $this->transaction->platform_commission = $total * 0.10; // 10% commission per product total
+                            $this->transaction->create();
 
-                    // Optional: Notification for seller
-                    $this->notification->user_id = $sid;
-                    $this->notification->related_id = $order_id;
-                    $this->notification->type = 'NEW_ORDER';
-                    $this->notification->message = "New order (#{$order_id}) received for Rs. " . number_format($total, 2);
-                    $this->notification->create();
+                            // Optional: Notification for seller
+                            $this->notification->user_id = $sid;
+                            $this->notification->related_id = $order_id;
+                            $this->notification->type = 'NEW_ORDER';
+                            $this->notification->message = "New order (#{$order_id}) received for Rs. " . number_format($total, 2);
+                            $this->notification->create();
 
-                    // Send Email Notification to Seller
-                    $seller = new User($this->db);
-                    $seller->id = $sid;
-                    if ($seller->readOne()) {
-                        NotificationService::sendNewOrderSellerEmail($seller->email, $order_id, $total);
+                            // Send Email Notification to Seller
+                            $seller = new User($this->db);
+                            $seller->id = $sid;
+                            if ($seller->readOne()) {
+                                NotificationService::sendNewOrderSellerEmail($seller->email, $order_id, $total);
+                            }
+                        }
+                    } catch (Exception $e) {
+                        error_log("Failed to process transaction for seller {$sid}: " . $e->getMessage());
                     }
                 }
 

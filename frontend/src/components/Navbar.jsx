@@ -36,6 +36,12 @@ const Navbar = () => {
   const cartCount = getCartCount();
   const wishlistCount = getWishlistCount();
 
+  const handleToggleViewMode = () => {
+    toggleViewMode();
+    // Navigate to homepage after a short delay to let the notification show
+    setTimeout(() => navigate('/'), 300);
+  };
+
   useEffect(() => {
     if (user) {
       fetchNotifications();
@@ -261,8 +267,13 @@ const Navbar = () => {
                     <Link to={viewMode === 'seller' ? "/seller?tab=profile" : "/profile/edit"} className="flex items-center px-5 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-50">
                       <User size={14} className="mr-3 opacity-60" /> {viewMode === 'seller' ? 'Merchant Profile' : 'Profile Settings'}
                     </Link>
+                    {user.role === 'buyer' && (
+                      <Link to="/become-seller" className="flex items-center px-5 py-2.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50 transition">
+                        <Store size={14} className="mr-3 text-indigo-600" /> Become a Seller
+                      </Link>
+                    )}
                     {(user.role === 'seller' || user.role === 'admin') && (
-                      <button onClick={toggleViewMode} className="w-full flex items-center px-5 py-2.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50 transition">
+                      <button onClick={handleToggleViewMode} className="w-full flex items-center px-5 py-2.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50 transition">
                         <Repeat size={14} className="mr-3" /> Switch to {viewMode === 'buyer' ? 'Seller' : 'Buyer'}
                       </button>
                     )}
@@ -361,10 +372,15 @@ const Navbar = () => {
                             <LayoutDashboard size={18} /> Merchant Dashboard
                           </Link>
                         )}
-                        <button onClick={toggleViewMode} className="w-full text-left font-bold text-gray-600 flex items-center gap-3">
+                        <button onClick={handleToggleViewMode} className="w-full text-left font-bold text-gray-600 flex items-center gap-3">
                             <Repeat size={18} /> Switch to {viewMode === 'buyer' ? 'Seller' : 'Buyer'}
                         </button>
                      </div>
+                   )}
+                   {user.role === 'buyer' && (
+                     <Link to="/become-seller" className="flex items-center gap-3 font-bold text-indigo-600">
+                        <Store size={18} className="text-indigo-600" /> Become a Seller
+                     </Link>
                    )}
                    <Link to={viewMode === 'seller' ? "/seller?tab=profile" : "/profile/edit"} className="flex items-center gap-3 font-bold text-gray-600">
                       <User size={18} /> {viewMode === 'seller' ? 'Merchant Profile' : 'My Profile'}

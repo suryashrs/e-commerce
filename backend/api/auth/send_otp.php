@@ -29,7 +29,15 @@ $user = new User($db);
 $user->email = $email;
 if ($user->emailExists()) {
     http_response_code(409);
-    echo json_encode(["message" => "An account with this email already exists."]);
+    $reqRole = isset($data->role) ? htmlspecialchars(strip_tags($data->role)) : 'buyer';
+    if ($reqRole === 'seller' && $user->role === 'buyer') {
+        echo json_encode([
+            "message" => "This email is already registered as a buyer account. If you want to become a seller, please log in and upgrade your current profile, or use a different email address to create a separate seller account.",
+            "conflict" => "buyer_to_seller"
+        ]);
+    } else {
+        echo json_encode(["message" => "An account with this email already exists."]);
+    }
     exit;
 }
 

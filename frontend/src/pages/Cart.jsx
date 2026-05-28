@@ -5,16 +5,29 @@ import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 import { API_BASE_URL } from '../config';
 import AuthGuardModal from '../components/AuthGuardModal';
+import { Tag } from 'lucide-react';
 
 const Cart = () => {
     const { cartItems, updateQuantity, removeFromCart, getCartTotal, cartError, clearCartError, appliedCoupon, applyCoupon, removeCoupon } = useCart();
-    const { user } = useAuth();
+    const { user, viewMode } = useAuth();
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [couponCode, setCouponCode] = useState('');
     const [couponError, setCouponError] = useState('');
     const [couponSuccess, setCouponSuccess] = useState('');
     const [isApplying, setIsApplying] = useState(false);
+    const [pointsRedeemed, setPointsRedeemed] = useState(false);
+    const [pointsError, setPointsError] = useState('');
+    const mockPointsBalance = 0;
     const navigate = useNavigate();
+
+    const handleRedeemClick = () => {
+        if (!pointsRedeemed && mockPointsBalance < 500) {
+            setPointsError(`Insufficient points. You have ${mockPointsBalance} points, but need 500 points.`);
+            return;
+        }
+        setPointsError('');
+        setPointsRedeemed(!pointsRedeemed);
+    };
 
     React.useEffect(() => {
         return () => clearCartError();
@@ -56,7 +69,8 @@ const Cart = () => {
         }
     };
 
-    const finalTotal = getCartTotal() - calculateDiscount();
+    const pointsDiscountAmount = pointsRedeemed ? 50 : 0;
+    const finalTotal = Math.max(0, getCartTotal() - calculateDiscount() - pointsDiscountAmount);
 
     const handleCheckout = (e) => {
         if (!user) {
@@ -132,13 +146,13 @@ const Cart = () => {
                 </div>
             )}
 
-            {(user?.role === 'seller' || user?.role === 'admin') && (
+            {viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin') && (
                 <div className="p-5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl shadow-sm">
                     <div className="flex gap-4 items-start">
                         <div className="bg-amber-100 p-2 rounded-lg text-lg">🚧</div>
                         <div>
                             <h3 className="text-sm font-black text-amber-900 leading-tight uppercase tracking-widest">Restricted Account</h3>
-                            <p className="text-amber-800/80 text-[11px] mt-1 font-medium leading-relaxed">Seller and admin accounts are prohibited from making purchases. Please use a separate buyer account for shopping.</p>
+                            <p className="text-amber-800/80 text-[11px] mt-1 font-medium leading-relaxed">You are in Seller Mode. Switch to Buyer Mode to make purchases.</p>
                         </div>
                     </div>
                 </div>
@@ -175,22 +189,45 @@ const Cart = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 {/* Coupon Box */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                        <span className="text-xl">🎟️</span> Have a Coupon Code?
+                    <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-gray-900">
+                        <Tag size={20} className="text-gray-700" /> Coupon Code
                     </h3>
+                    
+                    <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 mb-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <p className="font-bold text-gray-900 text-sm">Trend Points</p>
+                                <p className="text-gray-500 text-sm">Balance: {mockPointsBalance} points</p>
+                            </div>
+                            <button 
+                                onClick={handleRedeemClick}
+                                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition whitespace-nowrap ${
+                                    pointsRedeemed 
+                                    ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200' 
+                                    : 'bg-black text-white hover:bg-gray-800'
+                                }`}
+                            >
+                                {pointsRedeemed ? 'Cancel Redemption' : 'Redeem 500 Points for Rs.50'}
+                            </button>
+                        </div>
+                        {pointsError && (
+                            <p className="text-red-500 text-sm mt-3">{pointsError}</p>
+                        )}
+                    </div>
+
                     <div className="flex gap-2">
                         <input
                             type="text"
                             value={couponCode}
                             onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                            placeholder="Enter code (e.g. DEAL10)"
-                            className="flex-grow border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-black/5 focus:border-black outline-none transition-all uppercase font-mono tracking-wider"
+                            placeholder="ENTER COUPON CODE"
+                            className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-black/5 focus:border-black outline-none transition-all uppercase font-mono tracking-wider"
                             disabled={isApplying}
                         />
                         <button
                             onClick={handleApplyCoupon}
                             disabled={isApplying || !couponCode.trim()}
-                            className={`px-6 py-2 rounded-lg font-bold transition-all ${
+                            className={`px-8 py-2.5 rounded-lg font-bold transition-all ${
                                 isApplying || !couponCode.trim()
                                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                     : 'bg-black text-white hover:bg-gray-800 shadow-md'
@@ -237,6 +274,12 @@ const Cart = () => {
                                 <span>-Rs {calculateDiscount().toFixed(2)}</span>
                             </div>
                         )}
+                        {pointsRedeemed && (
+                            <div className="flex justify-between text-indigo-600 font-medium">
+                                <span>TrendPoints Discount</span>
+                                <span>-Rs 50.00</span>
+                            </div>
+                        )}
                         <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
                             <span className="text-lg font-bold text-gray-900">Total</span>
                             <span className="text-2xl font-black text-black">Rs {finalTotal.toFixed(2)}</span>
@@ -244,14 +287,14 @@ const Cart = () => {
                     </div>
                     <button
                         onClick={handleCheckout}
-                        disabled={user?.role === 'seller' || user?.role === 'admin'}
+                        disabled={viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin')}
                         className={`px-8 py-3.5 rounded-xl font-bold transition w-full mt-6 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 text-center ${
-                            (user?.role === 'seller' || user?.role === 'admin') 
+                            (viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin'))
                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed border-2 border-gray-200' 
                             : 'bg-primary text-white hover:bg-gray-800'
                         }`}
                     >
-                        {(user?.role === 'seller' || user?.role === 'admin') ? "🚫 Checkout Disabled" : "Proceed to Checkout"}
+                        {(viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin')) ? "🚫 Checkout Disabled" : "Proceed to Checkout"}
                     </button>
                     
                     <div className="relative my-4 flex items-center">
@@ -262,15 +305,15 @@ const Cart = () => {
 
                     <button
                         onClick={handleEsewaCheckout}
-                        disabled={user?.role === 'seller' || user?.role === 'admin'}
+                        disabled={viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin')}
                         className={`w-full py-3.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 hover:-translate-y-0.5 active:translate-y-0 ${
-                            (user?.role === 'seller' || user?.role === 'admin')
+                            (viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin'))
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-100'
                             : 'bg-[#60bb46] hover:bg-[#52a63b] text-white'
                         }`}
                     >
-                        <img src="https://esewa.com.np/common/images/esewa_logo.png" alt="eSewa" className={`h-6 ${(user?.role === 'seller' || user?.role === 'admin') ? 'grayscale opacity-50' : 'brightness-0 invert'}`} />
-                        {(user?.role === 'seller' || user?.role === 'admin') ? "🚫 Payment Disabled" : "Pay with eSewa"}
+                        <img src="https://esewa.com.np/common/images/esewa_logo.png" alt="eSewa" className={`h-6 ${(viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin')) ? 'grayscale opacity-50' : 'brightness-0 invert'}`} />
+                        {(viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin')) ? "🚫 Payment Disabled" : "Pay with eSewa"}
                     </button>
                     <Link to="/shop" className="mt-4 text-gray-500 hover:text-black hover:underline block text-center text-sm font-medium">
                         &larr; Continue Shopping

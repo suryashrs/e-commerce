@@ -5,7 +5,10 @@ import { useAuth } from "../context/AuthContext";
 const loginImage = "/assets/images/auth_bg.jpg";
 
 const Login = () => {
-    const [email, setEmail] = useState("");
+    const [email, setEmail] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("email") || "";
+    });
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const { login } = useAuth();
@@ -25,9 +28,11 @@ const Login = () => {
         }
 
         try {
+            const params = new URLSearchParams(window.location.search);
+            const redirectPath = params.get("redirect") || "/";
             const result = await login(email, password);
             if (result.success) {
-                navigate("/");
+                navigate(redirectPath);
             } else {
                 setError(result.error);
             }

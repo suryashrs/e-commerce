@@ -17,6 +17,7 @@ const Checkout = () => {
         phone: ''
     });
     const [processing, setProcessing] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -37,6 +38,7 @@ const Checkout = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         setProcessing(true);
+        setErrorMessage('');
 
         // Prepare order data
         const orderData = {
@@ -58,7 +60,11 @@ const Checkout = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(orderData)
         })
-            .then(res => res.json())
+            .then(async res => {
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || 'Error placing order');
+                return data;
+            })
             .then(data => {
                 setProcessing(false);
                 clearCart();
@@ -66,7 +72,7 @@ const Checkout = () => {
             })
             .catch(err => {
                 setProcessing(false);
-                alert('Error placing order. Please try again.');
+                setErrorMessage('Error placing order. Please try again.');
             });
     };
 
@@ -82,6 +88,19 @@ const Checkout = () => {
     return (
         <div className="max-w-6xl mx-auto space-y-6">
             <h2 className="text-2xl font-black tracking-tight">Checkout</h2>
+
+            {errorMessage && (
+                <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl font-medium flex justify-between items-center animate-shake">
+                    <span className="flex items-center gap-2">
+                        <span className="text-xl">⚠️</span> {errorMessage}
+                    </span>
+                    <button type="button" onClick={() => setErrorMessage('')} className="p-1 hover:bg-red-100 rounded-full transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Shipping Form */}

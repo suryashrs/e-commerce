@@ -100,7 +100,7 @@ export const AuthProvider = ({ children }) => {
             if (response.ok) {
                 return { success: true };
             } else {
-                return { success: false, error: data.message };
+                return { success: false, error: data.message, conflict: data.conflict || null };
             }
         } catch (error) {
             return { success: false, error: "Failed to send OTP." };

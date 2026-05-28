@@ -18,7 +18,13 @@ import {
     Calendar,
     Mail,
     Camera,
-    Bell
+    Bell,
+    Store,
+    Gift,
+    Star,
+    Trash2,
+    MessageSquare as MessageIcon,
+    RotateCcw
 } from 'lucide-react';
 
 const BuyerDashboard = () => {
@@ -36,12 +42,18 @@ const BuyerDashboard = () => {
     const [activeTab, setActiveTab] = useState(getInitialTab());
     const [loading, setLoading] = useState(false);
     const [cancellingOrderId, setCancellingOrderId] = useState(null);
+    const [returnRequests, setReturnRequests] = useState([]);
+    const [returningItem, setReturningItem] = useState(null);
+    const [returnReason, setReturnReason] = useState("");
+    const [returnImage, setReturnImage] = useState(null);
+    const [returnError, setReturnError] = useState("");
     const [orders, setOrders] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [paymentHistory, setPaymentHistory] = useState([]);
     const [paymentsLoading, setPaymentsLoading] = useState(false);
+    const [redeemPoints, setRedeemPoints] = useState('');
     
     // Payment Success state
     const [paymentSuccessModal, setPaymentSuccessModal] = useState(false);
@@ -67,6 +79,7 @@ const BuyerDashboard = () => {
         fetchOrders();
         fetchProfileData();
         fetchPaymentHistory();
+        fetchReturnRequests();
     }, [user, navigate]);
 
     const fetchPaymentHistory = async () => {
@@ -166,6 +179,57 @@ const BuyerDashboard = () => {
         }
     };
 
+    const fetchReturnRequests = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/returns/read_by_buyer.php?user_id=${user.id}`);
+            const data = await res.json();
+            if (res.ok && data.status === 200) {
+                setReturnRequests(data.body || []);
+            }
+        } catch (err) {
+            console.error("Failed to fetch returns", err);
+        }
+    };
+
+    const handleReturnSubmit = async () => {
+        if (!returnReason.trim()) {
+            setReturnError("Please provide a reason for return");
+            return;
+        }
+
+        setLoading(true);
+        setReturnError("");
+        const data = new FormData();
+        data.append("user_id", user.id);
+        data.append("order_id", returningItem.order_id);
+        data.append("order_item_id", returningItem.order_item_id);
+        data.append("seller_id", returningItem.seller_id);
+        data.append("reason", returnReason);
+        if (returnImage) data.append("image", returnImage);
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/returns/create.php`, {
+                method: "POST",
+                body: data
+            });
+            const result = await res.json();
+            if (res.ok) {
+                setSuccessMessage("Return request submitted successfully");
+                setReturningItem(null);
+                setReturnReason("");
+                setReturnImage(null);
+                fetchReturnRequests();
+                setTimeout(() => setSuccessMessage(''), 3000);
+            } else {
+                setReturnError(result.message || "Failed to submit return request");
+            }
+        } catch (err) {
+            setReturnError("Network error while submitting request");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -255,12 +319,13 @@ const BuyerDashboard = () => {
                 setSuccessMessage(`Order #${orderId} was successfully cancelled.`);
                 // Sync with server data to be safe
                 fetchOrders();
-                setTimeout(() => setSuccessMessage(''), 5000);
+                fetchReturnRequests();
             } else {
                 // Rollback on error
                 setOrders(originalOrders);
                 setError(data.message || 'Failed to cancel order.');
             }
+            setTimeout(() => setSuccessMessage(''), 5000);
         } catch (err) {
             // Rollback on error
             setOrders(originalOrders);
@@ -465,7 +530,29 @@ const BuyerDashboard = () => {
                                                     <p className="text-xs text-gray-400 font-medium mt-1 uppercase tracking-widest">Quantity: {item.quantity} × Rs. {item.item_price}</p>
                                                 </div>
                                             </div>
-                                            <p className="font-black text-sm">Rs. {(item.quantity * item.item_price).toFixed(2)}</p>
+                                            <div className="text-right">
+                                                <p className="font-black text-sm mb-2">Rs. {(item.quantity * item.item_price).toFixed(2)}</p>
+                                                {order.status?.toLowerCase() === 'delivered' && (
+                                                    (() => {
+                                                        const returnReq = returnRequests.find(r => r.order_item_id === item.order_item_id);
+                                                        if (returnReq) {
+                                                            return (
+                                                                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full uppercase tracking-widest inline-block shadow-sm">
+                                                                    Return {returnReq.status}
+                                                                </span>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <button 
+                                                                onClick={() => setReturningItem({...item, order_id: order.id})}
+                                                                className="bg-black hover:bg-zinc-800 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-md flex items-center gap-1.5 transition ml-auto shadow-sm"
+                                                            >
+                                                                <RotateCcw size={12} /> Return Item
+                                                            </button>
+                                                        );
+                                                    })()
+                                                )}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -486,37 +573,73 @@ const BuyerDashboard = () => {
         </div>
     );
 
-    const renderTrendPoints = () => (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-black text-white p-12 rounded-[3rem] shadow-2xl relative overflow-hidden mb-10">
-                <div className="absolute -right-20 -top-20 w-80 h-80 bg-white/5 rounded-full blur-[100px]"></div>
-                <div className="relative z-10 flex justify-between items-end">
-                    <div>
-                        <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/40 mb-3">Loyalty Balance</p>
-                        <h2 className="text-7xl font-black tracking-tighter">2,450</h2>
-                        <h3 className="text-xl font-bold mt-2 text-white/60 italic">TrendPoints</h3>
+    const renderTrendPoints = () => {
+        // Mock points data
+        const availablePoints = 0;
+        const lifetimePoints = 0;
+        
+        // Discount calculation: 500 points = Rs 50 -> 10 points = Rs 1
+        const calculatedDiscount = redeemPoints ? (parseFloat(redeemPoints) / 10).toFixed(2) : '0.00';
+
+        return (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                <h2 className="text-2xl font-black text-gray-900 mb-2">TrendPoints</h2>
+                <p className="text-gray-500 text-sm font-medium">Earn points with every purchase and redeem them for discounts!</p>
+            </div>
+
+            <div className="bg-black text-white rounded-xl shadow-lg relative overflow-hidden">
+                <div className="p-8">
+                    <div className="flex justify-between items-start mb-16">
+                        <div>
+                            <p className="text-sm text-gray-400 mb-1 font-medium">Available Points</p>
+                            <h2 className="text-7xl font-black">{availablePoints}</h2>
+                        </div>
+                        <Star size={64} className="text-white/10" strokeWidth={1} />
                     </div>
-                    <div className="bg-white/10 px-6 py-4 rounded-2xl backdrop-blur-md border border-white/10 text-center">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-white/50 mb-1">Membership</p>
-                        <p className="text-xs font-black uppercase tracking-widest text-amber-400">Platinum Elite</p>
+                    
+                    <div className="pt-6 border-t border-white/10 flex justify-between items-end">
+                        <div>
+                            <p className="text-sm text-gray-300 mb-1">Lifetime Points Earned</p>
+                            <p className="text-xs text-gray-500">Earn 1 point for every Rs.100 spent</p>
+                        </div>
+                        <p className="text-xl font-bold">{lifetimePoints}</p>
                     </div>
                 </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                 {[
-                     { label: 'Points Earned', value: '4,100', desc: 'Life-time total style accumulation' },
-                     { label: 'Next Reward', value: '550', desc: 'Points until exclusive VIP voucher' }
-                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">{stat.label}</h4>
-                        <p className="text-3xl font-black mb-2">{stat.value}</p>
-                        <p className="text-xs text-gray-500 font-medium">{stat.desc}</p>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                <h3 className="text-lg font-bold flex items-center gap-3 mb-6 text-gray-900">
+                    <Gift size={20} className="text-gray-700" />
+                    Redeem Points
+                </h3>
+                
+                <div className="space-y-4">
+                    <label className="block text-sm font-bold text-gray-800">
+                        Points to Redeem (Minimum: 500 points = Rs.50)
+                    </label>
+                    <div className="flex items-center gap-4">
+                        <input 
+                            type="number"
+                            value={redeemPoints}
+                            onChange={(e) => setRedeemPoints(e.target.value)}
+                            placeholder="500"
+                            className="flex-grow max-w-2xl border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-black focus:border-black outline-none transition"
+                        />
+                        <span className="text-gray-500 text-sm whitespace-nowrap">
+                            = Rs.{calculatedDiscount} discount
+                        </span>
                     </div>
-                 ))}
+                    
+                    <button className="bg-black text-white font-bold px-8 py-3.5 rounded-lg mt-2 w-full max-w-2xl transition hover:bg-gray-800 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                        Redeem {redeemPoints || '500'} Points
+                    </button>
+                    
+                    <p className="text-[11px] text-gray-400 mt-4">* Coupon will be valid for 90 days from redemption</p>
+                </div>
             </div>
         </div>
-    );
+    )};
 
     const handleMarkAsRead = async (notifId) => {
         setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
@@ -551,6 +674,7 @@ const BuyerDashboard = () => {
             case 'profile': return renderProfile();
             case 'orders': return renderOrders();
             case 'payments': return renderPaymentHistory();
+            case 'points': return renderTrendPoints();
             default: return renderOrders();
         }
     };
@@ -660,12 +784,12 @@ const BuyerDashboard = () => {
                                         onClick={() => setActiveTab(item.id)}
                                         className={`w-full flex items-center justify-between px-5 py-4 rounded-xl transition-all group ${
                                             activeTab === item.id 
-                                            ? 'bg-amber-400 text-white shadow-lg shadow-amber-100' 
+                                            ? 'bg-black text-white shadow-lg shadow-gray-200' 
                                             : 'text-gray-400 hover:bg-gray-50 hover:text-gray-900'
                                         }`}
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={`${activeTab === item.id ? 'text-white' : 'text-gray-400 group-hover:text-amber-500'} transition-colors`}>
+                                            <div className={`${activeTab === item.id ? 'text-white' : 'text-gray-400 group-hover:text-black'} transition-colors`}>
                                                 {item.icon}
                                             </div>
                                             <span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
@@ -673,6 +797,20 @@ const BuyerDashboard = () => {
                                         <ChevronRight size={14} className={`${activeTab === item.id ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 transition-opacity`} />
                                     </button>
                                 ))}
+                                {user.role === 'buyer' && (
+                                    <Link
+                                        to="/become-seller"
+                                        className="w-full flex items-center justify-between px-5 py-4 rounded-xl transition-all group text-indigo-600 hover:bg-indigo-50 mt-4 border border-dashed border-indigo-200"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-indigo-500 group-hover:scale-110 transition-transform">
+                                                <Store size={18} />
+                                            </div>
+                                            <span className="text-sm font-black uppercase tracking-widest">Become a Seller</span>
+                                        </div>
+                                        <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </Link>
+                                )}
                             </nav>
                         </div>
                     </aside>
@@ -710,6 +848,84 @@ const BuyerDashboard = () => {
                         >
                             View Order
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Request Return Modal */}
+            {returningItem && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform scale-100 animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <h2 className="text-lg font-black text-gray-900">Request Return</h2>
+                            <button onClick={() => {
+                                setReturningItem(null);
+                                setReturnError("");
+                            }} className="text-gray-400 hover:text-gray-600 transition">
+                                <XCircle size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6">
+                            <div className="flex gap-4 items-center mb-6 p-4 bg-gray-50 border border-gray-100 rounded-xl">
+                                <img 
+                                    src={returningItem.image_url || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=200"} 
+                                    alt={returningItem.product_name} 
+                                    className="w-16 h-16 object-cover rounded-lg shadow-sm" 
+                                />
+                                <div>
+                                    <h4 className="font-bold text-sm text-gray-900 leading-tight mb-1">{returningItem.product_name}</h4>
+                                    <p className="text-xs text-gray-500">Quantity: {returningItem.quantity} &times; Rs. {returningItem.item_price}</p>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Reason for Return *</label>
+                                    <textarea
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-black focus:ring-1 focus:ring-black outline-none transition text-sm resize-none"
+                                        rows="4"
+                                        placeholder="Please explain why you want to return this item..."
+                                        value={returnReason}
+                                        onChange={(e) => setReturnReason(e.target.value)}
+                                    ></textarea>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Upload Images (Optional)</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="file" 
+                                            accept="image/*"
+                                            onChange={(e) => setReturnImage(e.target.files[0])}
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {returnError && (
+                                    <div className="text-sm text-red-500 font-medium">
+                                        {returnError}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="mt-8 flex justify-end gap-3">
+                                <button 
+                                    onClick={() => setReturningItem(null)}
+                                    className="px-6 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={handleReturnSubmit}
+                                    disabled={loading}
+                                    className="px-6 py-2.5 rounded-xl bg-black text-white text-sm font-bold shadow-md hover:bg-zinc-800 active:scale-95 transition disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    {loading ? 'Submitting...' : 'Submit Request'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
