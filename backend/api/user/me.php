@@ -31,7 +31,9 @@ if($user->readOne()){
         "shop_name" => $user->shop_name,
         "shop_number" => $user->shop_number,
         "shop_address" => $user->shop_address,
-        "shop_phone" => $user->shop_phone
+        "shop_phone" => $user->shop_phone,
+        "points" => $user->points,
+        "lifetime_points" => $user->lifetime_points
     );
     http_response_code(200);
     echo json_encode($user_arr);

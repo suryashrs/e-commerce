@@ -55,6 +55,14 @@ class OrderController {
                     $this->coupon->incrementUsage($this->order->coupon_id);
                 }
 
+                // Award points to the buyer
+                $pointsEarned = floor($data->total_amount / 100);
+                if ($pointsEarned > 0) {
+                    $buyer = new User($this->db);
+                    $buyer->id = $data->user_id;
+                    $buyer->addPoints($pointsEarned);
+                }
+
                 // Create transactions for each seller in the order
                 $seller_totals = [];
                 foreach($data->items as $item) {

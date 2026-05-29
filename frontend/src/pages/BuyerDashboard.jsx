@@ -80,7 +80,7 @@ const BuyerDashboard = () => {
         fetchProfileData();
         fetchPaymentHistory();
         fetchReturnRequests();
-    }, [user, navigate]);
+    }, [user?.id, navigate]);
 
     const fetchPaymentHistory = async () => {
         if (!user) return;
@@ -127,7 +127,7 @@ const BuyerDashboard = () => {
             // Clean up URL to prevent repeated triggers
             navigate('/buyer', { replace: true });
         }
-    }, [location.pathname, location.search, navigate, clearCart, user]);
+    }, [location.pathname, location.search, navigate, clearCart]);
 
     if (!user) {
         return null; // Don't render until authentication redirects or user is loaded
@@ -147,6 +147,14 @@ const BuyerDashboard = () => {
                         calendarUrl: data.calendar_url || '',
                         displayEmail: data.email || '',
                     });
+                    
+                    // Sync points with global state if they exist
+                    if (data.points !== undefined) {
+                        updateUser({
+                            points: data.points,
+                            lifetime_points: data.lifetime_points
+                        });
+                    }
                 }
             })
             .catch(err => console.error("Failed to fetch profile", err));
@@ -574,9 +582,9 @@ const BuyerDashboard = () => {
     );
 
     const renderTrendPoints = () => {
-        // Mock points data
-        const availablePoints = 0;
-        const lifetimePoints = 0;
+        // Dynamically use real user points
+        const availablePoints = user?.points || 0;
+        const lifetimePoints = user?.lifetime_points || 0;
         
         // Discount calculation: 500 points = Rs 50 -> 10 points = Rs 1
         const calculatedDiscount = redeemPoints ? (parseFloat(redeemPoints) / 10).toFixed(2) : '0.00';

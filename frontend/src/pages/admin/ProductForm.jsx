@@ -138,9 +138,10 @@ const ProductForm = () => {
                             <option value="Tops">Tops</option>
                             <option value="Bottoms">Bottoms</option>
                             <option value="Outerwear">Outerwear</option>
-                            <option value="Dresses">Dresses</option>
                             <option value="Accessories">Accessories</option>
-                            <option value="Footwear">Footwear</option>
+                            <option value="Best Selling">Best Selling</option>
+                            <option value="New Arrivals">New Arrivals</option>
+                            <option value="Thrift">Thrift ♻️</option>
                         </select>
                     </div>
                 </div>

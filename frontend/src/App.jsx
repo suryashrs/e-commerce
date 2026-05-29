@@ -5,6 +5,7 @@ import { CartProvider } from "./context/CartContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import ScrollToTop from "./components/ScrollToTop";
 import Home from "./pages/Home";
 import ProductList from "./pages/ProductList";
 import TryOn from "./pages/TryOn";
@@ -40,6 +41,7 @@ function App() {
           {/* Recursively handle layout in routes or conditionally render Navbar here. 
               For now, simple approach: The Routes decide.
            */}
+          <ScrollToTop />
           <Routes>
             {/* Admin Section - No Main Navbar */}
             <Route path="/admin/*" element={

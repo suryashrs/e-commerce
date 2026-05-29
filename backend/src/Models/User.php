@@ -26,6 +26,10 @@ class User {
     public $shop_address;
     public $shop_phone;
 
+    // TrendPoints
+    public $points;
+    public $lifetime_points;
+
     public function __construct($db){
         $this->conn = $db;
     }
@@ -73,7 +77,7 @@ class User {
 
     // Check if email exists
     public function emailExists(){
-        $query = "SELECT id, name, password_hash, role, avatar, location, bio, phone, website, calendar_url, shop_status, shop_name, shop_number, shop_address, shop_phone FROM " . $this->table_name . " WHERE email = ? LIMIT 0,1";
+        $query = "SELECT id, name, password_hash, role, avatar, location, bio, phone, website, calendar_url, shop_status, shop_name, shop_number, shop_address, shop_phone, points, lifetime_points FROM " . $this->table_name . " WHERE email = ? LIMIT 0,1";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(1, $this->email);
         $stmt->execute();
@@ -95,6 +99,8 @@ class User {
             $this->shop_number = $row['shop_number'];
             $this->shop_address = $row['shop_address'];
             $this->shop_phone = $row['shop_phone'];
+            $this->points = $row['points'];
+            $this->lifetime_points = $row['lifetime_points'];
             return true;
         }
         return false;
@@ -102,7 +108,7 @@ class User {
 
     // Get Single User details
     public function readOne(){
-         $query = "SELECT id, name, email, role, avatar, location, bio, phone, website, calendar_url, shop_status, shop_name, shop_number, shop_address, shop_phone FROM " . $this->table_name . " WHERE id = ? LIMIT 0,1";
+         $query = "SELECT id, name, email, role, avatar, location, bio, phone, website, calendar_url, shop_status, shop_name, shop_number, shop_address, shop_phone, points, lifetime_points FROM " . $this->table_name . " WHERE id = ? LIMIT 0,1";
          $stmt = $this->conn->prepare($query);
          $stmt->bindParam(1, $this->id);
          $stmt->execute();
@@ -123,6 +129,8 @@ class User {
              $this->shop_number = $row['shop_number'];
              $this->shop_address = $row['shop_address'];
              $this->shop_phone = $row['shop_phone'];
+             $this->points = $row['points'];
+             $this->lifetime_points = $row['lifetime_points'];
              return true;
          }
          return false;
@@ -236,6 +244,15 @@ class User {
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt;
+    }
+
+    // Add Points to User
+    public function addPoints($pointsToAdd) {
+        $query = "UPDATE " . $this->table_name . " SET points = points + :points, lifetime_points = lifetime_points + :points WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':points', $pointsToAdd);
+        $stmt->bindParam(':id', $this->id);
+        return $stmt->execute();
     }
 }
 ?>

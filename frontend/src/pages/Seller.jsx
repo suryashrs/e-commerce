@@ -147,7 +147,7 @@ const Seller = () => {
     // Size Handlers
     const handleSizeStockChange = (index, value) => {
         const newSizes = [...formData.sizes];
-        newSizes[index].stock = parseInt(value) || 0;
+        newSizes[index].stock = Math.max(0, parseInt(value) || 0);
         
         // Auto-calculate total stock
         const totalStock = newSizes.reduce((acc, curr) => acc + curr.stock, 0);
@@ -176,7 +176,7 @@ const Seller = () => {
     // Edit Size Handlers
     const handleEditSizeStockChange = (index, value) => {
         const newSizes = [...editProductForm.sizes];
-        newSizes[index].stock = parseInt(value) || 0;
+        newSizes[index].stock = Math.max(0, parseInt(value) || 0);
         const totalStock = newSizes.reduce((acc, curr) => acc + curr.stock, 0);
         setEditProductForm(prev => ({ ...prev, sizes: newSizes, stock: totalStock.toString() }));
     };
@@ -1559,13 +1559,15 @@ const Seller = () => {
                                         <label className="block text-sm font-semibold text-gray-700 ml-1">Category</label>
                                         <select
                                             name="category" value={formData.category} onChange={handleInputChange}
-                                            className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner appearance-none"
+                                            className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner"
                                         >
                                             <option value="">Select category</option>
                                             <option value="tops">Tops</option>
                                             <option value="bottoms">Bottoms</option>
                                             <option value="outerwear">Outerwear</option>
                                             <option value="accessories">Accessories</option>
+                                            <option value="best selling">Best Selling</option>
+                                            <option value="new arrivals">New Arrivals</option>
                                             <option value="thrift">Thrift ♻️</option>
                                         </select>
                                     </div>
@@ -1605,7 +1607,7 @@ const Seller = () => {
                                                     <div className="flex items-center justify-center gap-2">
                                                         <span className="text-[9px] font-bold text-gray-400 uppercase">Stock:</span>
                                                         <input 
-                                                            type="number" value={sizeObj.stock} 
+                                                            type="number" value={sizeObj.stock} min="0"
                                                             onChange={(e) => handleSizeStockChange(index, e.target.value)}
                                                             className="w-12 bg-white rounded-lg text-center font-black text-xs py-1 border border-gray-100 focus:ring-2 focus:ring-indigo-500/20"
                                                         />
@@ -2342,6 +2344,8 @@ const Seller = () => {
                                                 <option value="bottoms">Bottoms</option>
                                                 <option value="outerwear">Outerwear</option>
                                                 <option value="accessories">Accessories</option>
+                                                <option value="best selling">Best Selling</option>
+                                                <option value="new arrivals">New Arrivals</option>
                                                 <option value="thrift">Thrift ♻️</option>
                                             </select>
                                         </div>
@@ -2381,7 +2385,7 @@ const Seller = () => {
                                                         <div className="flex items-center justify-center gap-1">
                                                             <span className="text-[8px] font-bold text-gray-400">STOCK:</span>
                                                             <input 
-                                                                type="number" value={sizeObj.stock} 
+                                                                type="number" value={sizeObj.stock} min="0"
                                                                 onChange={(e) => handleEditSizeStockChange(index, e.target.value)}
                                                                 className="w-10 bg-white rounded text-center font-black text-[10px] py-0.5 border border-gray-100"
                                                             />

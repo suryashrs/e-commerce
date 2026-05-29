@@ -134,9 +134,19 @@ class ProductController {
 
             $this->product->is_try_on_only = $data['is_try_on_only'] ?? 0;
             $this->product->has_tryon = $data['has_tryon'] ?? 0;
-            $this->product->stock = $data['stock'] ?? 0;
+            // Ensure stock is never negative
+            $this->product->stock = max(0, (int)($data['stock'] ?? 0));
 
-            $this->product->sizes = json_encode($data['sizes'] ?? []);
+            // Sanitize per-size stock to never be negative
+            $sizes = $data['sizes'] ?? [];
+            if (is_string($sizes)) $sizes = json_decode($sizes, true) ?? [];
+            $sizes = array_map(function($s) {
+                if (is_array($s) && isset($s['stock'])) {
+                    $s['stock'] = max(0, (int)$s['stock']);
+                }
+                return $s;
+            }, $sizes);
+            $this->product->sizes = json_encode($sizes);
             $this->product->colors = json_encode($data['colors'] ?? []);
 
             if($this->product->create()){
@@ -210,9 +220,19 @@ class ProductController {
 
             $this->product->is_try_on_only = $data['is_try_on_only'] ?? 0;
             $this->product->has_tryon = $data['has_tryon'] ?? 0;
-            $this->product->stock = $data['stock'] ?? 0;
+            // Ensure stock is never negative
+            $this->product->stock = max(0, (int)($data['stock'] ?? 0));
 
-            $this->product->sizes = json_encode($data['sizes'] ?? []);
+            // Sanitize per-size stock to never be negative
+            $sizes = $data['sizes'] ?? [];
+            if (is_string($sizes)) $sizes = json_decode($sizes, true) ?? [];
+            $sizes = array_map(function($s) {
+                if (is_array($s) && isset($s['stock'])) {
+                    $s['stock'] = max(0, (int)$s['stock']);
+                }
+                return $s;
+            }, $sizes);
+            $this->product->sizes = json_encode($sizes);
             $this->product->colors = json_encode($data['colors'] ?? []);
 
             if($this->product->update()){

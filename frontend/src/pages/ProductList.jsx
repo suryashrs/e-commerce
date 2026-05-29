@@ -77,14 +77,14 @@ const ProductList = () => {
       });
     }
 
-    // Collection filter (Mock implementation - could be based on condition or tags if DB supports)
+    // Collection filter
     if (selectedCollection && selectedCollection !== "All Products") {
         if (selectedCollection === "New Arrivals") {
-            // Sort by newest, or filter by date. Fake it for now or rely on a DB field.
-            // Assuming default sort is newest, we just don't filter out, but maybe it only shows last 10?
-            // Will leave as mostly a placeholder filter for now, matching the UI requirement.
+            // New arrivals: sort by created_at (newest first) and take top 12
+            filtered = [...filtered].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 12);
         } else if (selectedCollection === "Thrift Finds") {
-             // Let's assume Thrift finds have "Fair" or "Good" condition. This depends on backend data.
+             // Thrift finds: filter where category contains 'thrift'
+             filtered = filtered.filter(p => p.category && p.category.toLowerCase().includes('thrift'));
         }
     }
 
@@ -173,15 +173,15 @@ const ProductList = () => {
                               setSearchParams({});
                           }
                       }}
-                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs appearance-none"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs"
                   >
                       <option value="">All Categories</option>
                       <option value="Tops">Tops</option>
                       <option value="Bottoms">Bottoms</option>
                       <option value="Outerwear">Outerwear</option>
-                      <option value="Dresses">Dresses</option>
+                      <option value="Accessories">Accessories</option>
                       <option value="Best Selling">Best Selling</option>
-                      <option value="Footwear">Footwear</option>
+                      <option value="New Arrivals">New Arrivals</option>
                       <option value="Thrift">Thrift ♻️</option>
                   </select>
               </div>
@@ -192,7 +192,7 @@ const ProductList = () => {
                   <select
                       value={selectedSize}
                       onChange={(e) => setSelectedSize(e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs appearance-none"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs"
                   >
                       <option value="">All Sizes</option>
                       <option value="S">S</option>
@@ -210,7 +210,7 @@ const ProductList = () => {
                   <select
                       value={selectedCollection}
                       onChange={(e) => setSelectedCollection(e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs appearance-none"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs"
                   >
                       <option value="">All Products</option>
                       <option value="New Arrivals">New Arrivals</option>
@@ -224,7 +224,7 @@ const ProductList = () => {
                   <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs appearance-none"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:ring-1 focus:ring-black outline-none bg-white text-xs"
                   >
                       <option value="">Default</option>
                       <option value="price-low">Price: Low to High</option>

@@ -1,0 +1,13 @@
+Array
+(
+    [name] => Nike Vintage WindCheater
+    [category] => thrift
+    [price] => 597
+    [description] => Used only few times
+    [stock] => 1
+    [seller_id] => 4
+    [sizes] => [{"size":"S","stock":0},{"size":"M","stock":0},{"size":"L","stock":0},{"size":"XL","stock":1}]
+    [colors] => ["Black"]
+    [has_tryon] => undefined
+    [image_url] => https://i.pinimg.com/736x/be/95/15/be9515a9daec861786fcd92fb8934cd8.jpg
+)
