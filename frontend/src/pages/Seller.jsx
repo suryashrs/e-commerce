@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+﻿import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
@@ -23,7 +23,8 @@ import {
     MessageSquare as MessageIcon,
     RotateCcw,
     CheckCircle,
-    XOctagon
+    XOctagon,
+    X
 } from 'lucide-react';
 import { 
     Chart as ChartJS, 
@@ -67,6 +68,7 @@ const Seller = () => {
     const [activeTab, setActiveTab] = useState(getInitialTab);
     const [popupConfig, setPopupConfig] = useState({ isOpen: false, message: '', type: 'info' });
     const [sellerOrders, setSellerOrders] = useState([]);
+    const [viewOrderDetails, setViewOrderDetails] = useState(null);
 
     const showPopup = (message, type = 'info') => {
         setPopupConfig({ isOpen: true, message, type });
@@ -1233,6 +1235,7 @@ const Seller = () => {
     );
 
     return (
+        <>
         <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
             <PopupModal 
                 isOpen={popupConfig.isOpen} 
@@ -1431,9 +1434,15 @@ const Seller = () => {
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
+                                                <div className="text-right flex flex-col items-end gap-2">
                                                     <p className="font-black text-gray-900 text-lg">Rs {parseFloat(order.total_amount).toFixed(0)}</p>
                                                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(order.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                                                    <button
+                                                        onClick={() => setViewOrderDetails(order)}
+                                                        className="text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1 rounded-lg transition"
+                                                    >
+                                                        View Details
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
@@ -1791,6 +1800,7 @@ const Seller = () => {
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Expiry Date</label>
                                             <input 
                                                 type="date" name="expiry_date" value={couponForm.expiry_date} onChange={handleCouponInputChange}
+                                                min={new Date().toISOString().split('T')[0]}
                                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-gray-700"
                                             />
                                         </div>
@@ -1934,42 +1944,49 @@ const Seller = () => {
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-4 rounded-r-2xl border-y border-r border-transparent group-hover:border-gray-100 text-right">
-                                                            <div className="relative group/dropdown inline-block text-left">
-                                                                <button 
-                                                                    className="bg-black text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-gray-800 transition shadow-md flex items-center gap-1"
-                                                                >
-                                                                    Manage <span className="text-[10px]">▼</span>
-                                                                </button>
-                                                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl z-50 border border-gray-100 opacity-0 invisible group-hover/dropdown:opacity-100 group-hover/dropdown:visible transition-all duration-200">
-                                                                    <div className="py-2">
-                                                                        {order.status !== 'shipped' && order.status !== 'delivered' && order.status !== 'cancelled' && (
-                                                                            <button 
-                                                                                onClick={() => handleOrderStatusUpdate(order.id, 'Shipped')}
-                                                                                className="block w-full text-left px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 font-bold transition-colors"
-                                                                            >
-                                                                                📦 Mark as Shipped
-                                                                            </button>
-                                                                        )}
-                                                                        {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                                                                             <button 
-                                                                                onClick={() => handleOrderStatusUpdate(order.id, 'Delivered')}
-                                                                                className="block w-full text-left px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-green-600 font-bold transition-colors border-t border-gray-50"
-                                                                            >
-                                                                                ✅ Mark as Delivered
-                                                                            </button>
-                                                                        )}
-                                                                        {order.status !== 'cancelled' && order.status !== 'delivered' && (
-                                                                             <button 
-                                                                                onClick={() => handleOrderStatusUpdate(order.id, 'Cancelled')}
-                                                                                className="block w-full text-left px-5 py-3 text-sm text-rose-600 hover:bg-rose-50 font-bold transition-colors border-t border-gray-50"
-                                                                            >
-                                                                                ❌ Cancel Order
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
-
-                                                                </div>
-                                                            </div>
+                                                             <div className="flex justify-end gap-2">
+                                                                 <button
+                                                                     onClick={() => setViewOrderDetails(order)}
+                                                                     className="bg-indigo-50 text-indigo-600 border border-indigo-200 px-3 py-2 rounded-xl text-xs font-bold hover:bg-indigo-100 transition"
+                                                                 >
+                                                                     View Details
+                                                                 </button>
+                                                                 <div className="relative group/dropdown inline-block text-left">
+                                                                     <button 
+                                                                         className="bg-black text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-gray-800 transition shadow-md flex items-center gap-1"
+                                                                     >
+                                                                         Manage <span className="text-[10px]">▼</span>
+                                                                     </button>
+                                                                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl z-50 border border-gray-100 opacity-0 invisible group-hover/dropdown:opacity-100 group-hover/dropdown:visible transition-all duration-200">
+                                                                         <div className="py-2">
+                                                                             {order.status !== 'shipped' && order.status !== 'delivered' && order.status !== 'cancelled' && (
+                                                                                 <button 
+                                                                                     onClick={() => handleOrderStatusUpdate(order.id, 'Shipped')}
+                                                                                     className="block w-full text-left px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 font-bold transition-colors"
+                                                                                 >
+                                                                                     📦 Mark as Shipped
+                                                                                 </button>
+                                                                             )}
+                                                                             {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                                                                                  <button 
+                                                                                     onClick={() => handleOrderStatusUpdate(order.id, 'Delivered')}
+                                                                                     className="block w-full text-left px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-green-600 font-bold transition-colors border-t border-gray-50"
+                                                                                 >
+                                                                                     ✅ Mark as Delivered
+                                                                                 </button>
+                                                                             )}
+                                                                             {order.status !== 'cancelled' && order.status !== 'delivered' && order.status !== 'shipped' && order.status !== 'Shipped' && order.status !== 'Delivered' && (
+                                                                                  <button 
+                                                                                     onClick={() => handleOrderStatusUpdate(order.id, 'Cancelled')}
+                                                                                     className="block w-full text-left px-5 py-3 text-sm text-rose-600 hover:bg-rose-50 font-bold transition-colors border-t border-gray-50"
+                                                                                 >
+                                                                                     ❌ Cancel Order
+                                                                                 </button>
+                                                                             )}
+                                                                         </div>
+                                                                     </div>
+                                                                 </div>
+                                                             </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -2294,6 +2311,7 @@ const Seller = () => {
                                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Expiry Date</label>
                                         <input
                                             type="date" value={editForm.expiry_date}
+                                            min={new Date().toISOString().split('T')[0]}
                                             onChange={(e) => setEditForm(prev => ({ ...prev, expiry_date: e.target.value }))}
                                             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-gray-700"
                                         />
@@ -2450,7 +2468,71 @@ const Seller = () => {
             </main>
             </div>
         </div>
+
+            {/* ORDER DETAILS MODAL — rendered at root level so fixed positioning is never clipped */}
+            {viewOrderDetails && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setViewOrderDetails(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col" style={{maxHeight: '90vh'}} onClick={(e) => e.stopPropagation()}>
+                        {/* Sticky header */}
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 rounded-t-2xl shrink-0">
+                            <h2 className="text-xl font-black text-gray-900">Order Details — <span className="font-mono text-gray-500">#{viewOrderDetails.id}</span></h2>
+                            <button onClick={() => setViewOrderDetails(null)} className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-red-100 hover:text-red-600 rounded-full transition-colors text-gray-700 font-black text-xl leading-none">
+                                ✕
+                            </button>
+                        </div>
+                        {/* Scrollable content */}
+                        <div className="overflow-y-auto p-6 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-900 mb-3">Order Information</h3>
+                                    <div className="space-y-2.5">
+                                        <div className="flex justify-between text-sm"><span className="text-gray-500">Order ID:</span><span className="font-mono font-bold text-gray-800">#{viewOrderDetails.id}</span></div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-500">Status:</span>
+                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${ viewOrderDetails.status?.toLowerCase() === 'delivered' ? 'bg-green-100 text-green-700' : viewOrderDetails.status?.toLowerCase() === 'shipped' ? 'bg-blue-100 text-blue-700' : viewOrderDetails.status?.toLowerCase() === 'cancelled' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>{viewOrderDetails.status}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm"><span className="text-gray-500">Order Date:</span><span className="font-semibold text-gray-800">{new Date(viewOrderDetails.created_at).toLocaleString('en-US', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' })}</span></div>
+                                        <div className="flex justify-between text-sm"><span className="text-gray-500">Payment:</span><span className="font-semibold text-gray-800">{viewOrderDetails.payment_method === 'esewa' ? 'eSewa' : 'Cash on Delivery'}</span></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-900 mb-3">Buyer Information</h3>
+                                    <div className="space-y-2.5">
+                                        <div className="flex justify-between text-sm"><span className="text-gray-500">Name:</span><span className="font-semibold text-gray-800">{viewOrderDetails.customer_name}</span></div>
+                                        <div className="flex justify-between text-sm"><span className="text-gray-500">Email:</span><span className="font-semibold text-gray-800 text-right break-all">{viewOrderDetails.customer_email || '—'}</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 mb-3">Shipping Address</h3>
+                                <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700">{viewOrderDetails.shipping_address || <span className="text-gray-400 italic">No address provided.</span>}</div>
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 mb-3">Order Items</h3>
+                                <div className="space-y-3">
+                                    {viewOrderDetails.items.map((item, idx) => (
+                                        <div key={idx} className="flex items-center gap-4 bg-gray-50 rounded-xl p-4">
+                                            <img src={item.image_url} alt={item.product_name} className="w-14 h-14 rounded-lg object-cover border border-gray-200"/>
+                                            <div className="flex-grow">
+                                                <p className="font-bold text-gray-900 text-sm">{item.product_name}</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">Qty: {item.quantity} × Rs. {parseFloat(item.item_price).toFixed(2)}</p>
+                                            </div>
+                                            <p className="font-bold text-gray-900">Rs. {(item.quantity * item.item_price).toFixed(2)}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-100 pt-4 flex justify-between items-center">
+                                <span className="text-sm text-gray-500">Total Amount</span>
+                                <span className="text-2xl font-black text-gray-900">Rs. {parseFloat(viewOrderDetails.total_amount).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 
 export default Seller;
+

@@ -25,8 +25,9 @@ if (!$db) {
 $seller_id = isset($_GET['seller_id']) ? $_GET['seller_id'] : die();
 
 // Query to fetch orders that contain products belonging to the seller, including customer name
-$query = "SELECT o.id, o.status, o.created_at, 
-          u.name as customer_name,
+$query = "SELECT o.id, o.status, o.created_at, o.total_amount as order_total,
+          o.shipping_address, o.payment_method,
+          u.name as customer_name, u.email as customer_email,
           oi.product_id, oi.quantity, oi.price as item_price, 
           p.name as product_name, p.image_url
           FROM orders o 
@@ -52,6 +53,9 @@ while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
             "status" => $row['status'],
             "created_at" => $row['created_at'],
             "customer_name" => $row['customer_name'],
+            "customer_email" => $row['customer_email'],
+            "shipping_address" => $row['shipping_address'],
+            "payment_method" => $row['payment_method'] ?? 'cod',
             "items" => array()
         );
     }

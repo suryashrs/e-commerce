@@ -36,18 +36,19 @@ class Transaction {
      public function getRevenueStats($timeframe = 'today'){
          $date_filter = "";
          if($timeframe === 'today'){
-             $date_filter = "AND DATE(t.created_at) = CURDATE()";
+             // Use rolling 24 hours so revenue doesn't reset to 0 at exactly midnight
+             $date_filter = "AND t.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)";
          } elseif($timeframe === 'yesterday'){
-             $date_filter = "AND DATE(t.created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+             $date_filter = "AND t.created_at >= DATE_SUB(NOW(), INTERVAL 48 HOUR) AND t.created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)";
          } elseif($timeframe === '7days'){
              $date_filter = "AND t.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
          }
 
-         // We join with orders to ensure we only count 'delivered' ones!
+         // Include both 'delivered' (for COD) and 'completed' (for eSewa paid) orders
          $query = "SELECT SUM(t.amount) as total_revenue, SUM(t.platform_commission) as platform_revenue 
                    FROM " . $this->table_name . " t
                    JOIN orders o ON t.order_id = o.id
-                   WHERE o.status = 'delivered' $date_filter";
+                   WHERE o.status IN ('delivered', 'completed') $date_filter";
          
          $stmt = $this->conn->prepare($query);
          $stmt->execute();
@@ -59,7 +60,7 @@ class Transaction {
                    FROM " . $this->table_name . " t
                    JOIN users u ON t.seller_id = u.id
                    JOIN orders o ON t.order_id = o.id
-                   WHERE o.status = 'delivered'
+                   WHERE o.status IN ('delivered', 'completed')
                    GROUP BY t.seller_id";
          
          $stmt = $this->conn->prepare($query);

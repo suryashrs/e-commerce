@@ -254,5 +254,13 @@ class User {
         $stmt->bindParam(':id', $this->id);
         return $stmt->execute();
     }
+
+    // Get All Buyers
+    public function getAllBuyers() {
+        $query = "SELECT id, name, email FROM " . $this->table_name . " WHERE role = 'buyer'";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt;
+    }
 }
 ?>

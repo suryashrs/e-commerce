@@ -8,12 +8,15 @@ import {
     Calendar,
     User,
     CreditCard,
-    MoreHorizontal
+    MoreHorizontal,
+    Eye,
+    X
 } from "lucide-react";
 
 const AdminOrders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [viewOrderDetails, setViewOrderDetails] = useState(null);
     
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -25,8 +28,10 @@ const AdminOrders = () => {
 
     const fetchOrders = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/orders/read_all.php`);
-            setOrders(response.data);
+            const response = await axios.get(`${API_BASE_URL}/admin/orders.php`);
+            if (response.data.status === 200) {
+                setOrders(response.data.body);
+            }
             setLoading(false);
         } catch (error) {
             console.error("Error fetching orders:", error);
@@ -136,8 +141,11 @@ const AdminOrders = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-right text-gray-700">
-                                        <button className="p-1.5 hover:bg-white/5 rounded-lg transition">
-                                            <MoreHorizontal size={14} />
+                                        <button 
+                                            onClick={() => setViewOrderDetails(order)}
+                                            className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-indigo-500/20 transition flex items-center gap-1.5 ml-auto"
+                                        >
+                                            <Eye size={13} /> View Details
                                         </button>
                                     </td>
                                 </tr>
@@ -203,6 +211,94 @@ const AdminOrders = () => {
                     </div>
                 )}
             </div>
+
+            {/* ===== ORDER DETAILS MODAL ===== */}
+            {viewOrderDetails && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center p-6 border-b border-gray-100">
+                            <h2 className="text-xl font-black text-gray-900">
+                                Order Details — <span className="font-mono text-gray-500">#{viewOrderDetails.id}</span>
+                            </h2>
+                            <button onClick={() => setViewOrderDetails(null)} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-400">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-900 mb-3">Order Information</h3>
+                                    <div className="space-y-2.5">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-500">Order ID:</span>
+                                            <span className="font-semibold text-gray-800 font-mono">#{viewOrderDetails.id}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-500">Status:</span>
+                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                                viewOrderDetails.status?.toLowerCase() === 'delivered' || viewOrderDetails.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-700' :
+                                                viewOrderDetails.status?.toLowerCase() === 'shipped' ? 'bg-blue-100 text-blue-700' :
+                                                viewOrderDetails.status?.toLowerCase() === 'cancelled' ? 'bg-rose-100 text-rose-700' :
+                                                'bg-amber-100 text-amber-700'
+                                            }`}>{viewOrderDetails.status}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-500">Order Date:</span>
+                                            <span className="font-semibold text-gray-800">{new Date(viewOrderDetails.created_at).toLocaleString('en-US', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' })}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-500">Payment Method:</span>
+                                            <span className="font-semibold text-gray-800 capitalize">{viewOrderDetails.payment_method === 'esewa' ? 'eSewa' : 'Cash on Delivery'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-900 mb-3">Buyer Information</h3>
+                                    <div className="space-y-2.5">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-500">Name:</span>
+                                            <span className="font-semibold text-gray-800">{viewOrderDetails.customer_name}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-500">Email:</span>
+                                            <span className="font-semibold text-gray-800 text-right break-all">{viewOrderDetails.customer_email || '—'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 mb-3">Shipping Address</h3>
+                                <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700">
+                                    {viewOrderDetails.shipping_address || <span className="text-gray-400 italic">No address provided.</span>}
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 mb-3">Order Items</h3>
+                                <div className="space-y-3">
+                                    {(viewOrderDetails.items || []).map((item, idx) => (
+                                        <div key={idx} className="flex items-center gap-4 bg-gray-50 rounded-xl p-4">
+                                            <img
+                                                src={item.image_url}
+                                                alt={item.product_name}
+                                                className="w-14 h-14 rounded-lg object-cover border border-gray-200 shadow-sm"
+                                            />
+                                            <div className="flex-grow">
+                                                <p className="font-bold text-gray-900 text-sm">{item.product_name}</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">Quantity: {item.quantity} × Rs. {parseFloat(item.item_price).toFixed(2)}</p>
+                                            </div>
+                                            <p className="font-bold text-gray-900">Rs. {(item.quantity * item.item_price).toFixed(2)}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-100 pt-4 flex justify-between items-center">
+                                <span className="text-sm text-gray-500">Total Amount</span>
+                                <span className="text-2xl font-black text-gray-900">Rs. {parseFloat(viewOrderDetails.total_amount).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

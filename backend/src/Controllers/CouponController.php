@@ -54,6 +54,30 @@ class CouponController {
             $this->coupon->expiry_date = $data['expiry_date'];
             
             if($this->coupon->create()){
+                require_once __DIR__ . '/../Models/User.php';
+                require_once __DIR__ . '/../Models/Notification.php';
+                
+                $userModel = new User($this->db);
+                $notification = new Notification($this->db);
+                
+                // Get Seller Name
+                $sellerName = "A seller";
+                $userModel->id = $this->coupon->seller_id;
+                if($userModel->readOne()){
+                    $sellerName = !empty($userModel->shop_name) ? $userModel->shop_name : $userModel->name;
+                }
+                
+                // Notify all buyers
+                $buyersStmt = $userModel->getAllBuyers();
+                while ($buyer = $buyersStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $notification->user_id = $buyer['id'];
+                    $notification->related_id = 0; // Global coupon notification
+                    $notification->type = 'COUPON';
+                    $notification->message = "New Coupon '{$this->coupon->code}' made by {$sellerName}. Valid up to {$this->coupon->expiry_date}.";
+                    $notification->is_read = 0;
+                    $notification->create();
+                }
+
                 return array("status" => 201, "body" => array("message" => "Coupon created successfully."));
             }
             return array("status" => 503, "body" => array("message" => "Unable to create coupon."));

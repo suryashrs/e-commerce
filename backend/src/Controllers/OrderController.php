@@ -37,6 +37,9 @@ class OrderController {
             $this->order->total_amount = $data->total_amount;
             $this->order->items = $data->items;
             $this->order->coupon_id = null;
+            $this->order->shipping_address = $data->address ?? null;
+            $this->order->email = $data->email ?? null;
+            $this->order->payment_method = $data->payment_method ?? 'cod';
 
             // Process Coupon if provided
             if(!empty($data->coupon_code)){
@@ -151,6 +154,20 @@ class OrderController {
      * Scenario A: Seller updates order status to 'Shipped'
      */
     public function updateStatus($order_id, $status, $tracking_number = null) {
+        // Guard: prevent cancellation of already-shipped or delivered orders
+        if (strtolower($status) === 'cancelled') {
+            $currentOrder = $this->order->getById($order_id);
+            if ($currentOrder) {
+                $currentStatus = strtolower($currentOrder['status'] ?? '');
+                if ($currentStatus === 'shipped' || $currentStatus === 'delivered') {
+                    return array(
+                        "status" => 403,
+                        "body" => array("message" => "Cannot cancel an order that has already been {$currentOrder['status']}.")
+                    );
+                }
+            }
+        }
+
         if ($this->order->updateStatus($order_id, $status)) {
             // Trigger notification for all status changes!
             $orderData = $this->order->getById($order_id);

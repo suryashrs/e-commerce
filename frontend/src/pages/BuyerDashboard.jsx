@@ -42,6 +42,7 @@ const BuyerDashboard = () => {
     const [activeTab, setActiveTab] = useState(getInitialTab());
     const [loading, setLoading] = useState(false);
     const [cancellingOrderId, setCancellingOrderId] = useState(null);
+    const [cancelConfirmOrderId, setCancelConfirmOrderId] = useState(null);
     const [returnRequests, setReturnRequests] = useState([]);
     const [returningItem, setReturningItem] = useState(null);
     const [returnReason, setReturnReason] = useState("");
@@ -304,7 +305,11 @@ const BuyerDashboard = () => {
     };
 
     const handleCancelOrder = async (orderId) => {
-        if (!window.confirm("Are you sure you want to cancel this order?")) return;
+        setCancelConfirmOrderId(orderId);
+    };
+
+    const confirmCancelOrder = async (orderId) => {
+        setCancelConfirmOrderId(null);
         
         // Optimistic UI: Update state immediately
         const originalOrders = [...orders];
@@ -805,20 +810,7 @@ const BuyerDashboard = () => {
                                         <ChevronRight size={14} className={`${activeTab === item.id ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 transition-opacity`} />
                                     </button>
                                 ))}
-                                {user.role === 'buyer' && (
-                                    <Link
-                                        to="/become-seller"
-                                        className="w-full flex items-center justify-between px-5 py-4 rounded-xl transition-all group text-indigo-600 hover:bg-indigo-50 mt-4 border border-dashed border-indigo-200"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-indigo-500 group-hover:scale-110 transition-transform">
-                                                <Store size={18} />
-                                            </div>
-                                            <span className="text-sm font-black uppercase tracking-widest">Become a Seller</span>
-                                        </div>
-                                        <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </Link>
-                                )}
+
                             </nav>
                         </div>
                     </aside>
@@ -931,6 +923,39 @@ const BuyerDashboard = () => {
                                     className="px-6 py-2.5 rounded-xl bg-black text-white text-sm font-bold shadow-md hover:bg-zinc-800 active:scale-95 transition disabled:opacity-70 disabled:cursor-not-allowed"
                                 >
                                     {loading ? 'Submitting...' : 'Submit Request'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cancel Order Confirmation Toast Modal */}
+            {cancelConfirmOrderId && (
+                <div className="fixed inset-0 z-[200] flex items-end justify-center pb-10 sm:items-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mb-5">
+                                <XCircle size={32} className="text-rose-500" strokeWidth={1.5} />
+                            </div>
+                            <h3 className="text-xl font-black tracking-tight mb-2">Cancel Order?</h3>
+                            <p className="text-gray-400 text-sm font-medium mb-8">
+                                Are you sure you want to cancel{' '}
+                                <span className="font-black text-gray-900">Order #{cancelConfirmOrderId}</span>?
+                                <br />This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3 w-full">
+                                <button
+                                    onClick={() => setCancelConfirmOrderId(null)}
+                                    className="flex-1 py-3.5 rounded-2xl border border-gray-200 text-sm font-black uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition active:scale-95"
+                                >
+                                    Keep Order
+                                </button>
+                                <button
+                                    onClick={() => confirmCancelOrder(cancelConfirmOrderId)}
+                                    className="flex-1 py-3.5 rounded-2xl bg-rose-500 text-white text-sm font-black uppercase tracking-widest hover:bg-rose-600 transition shadow-lg shadow-rose-200 active:scale-95"
+                                >
+                                    Yes, Cancel
                                 </button>
                             </div>
                         </div>

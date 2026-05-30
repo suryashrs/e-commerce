@@ -111,13 +111,7 @@ const AdminLayout = () => {
                         SYSTEM VERSION: 2.4.0-STABLE
                     </div>
                     <div className="flex items-center space-x-6">
-                        <button className="text-gray-500 hover:text-indigo-400 transition relative">
-                            <Bell size={20} />
-                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-500 rounded-full"></span>
-                        </button>
-                        <button className="text-gray-500 hover:text-white transition">
-                            <Settings size={20} />
-                        </button>
+
                         <button 
                             onClick={() => {
                                 logout();

@@ -22,6 +22,8 @@ export const CartProvider = ({ children }) => {
     const [cartError, setCartError] = useState(null);
     const [cartSuccess, setCartSuccess] = useState(null);
     const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const applyCoupon = (coupon) => setAppliedCoupon(coupon);
+    const removeCoupon = () => setAppliedCoupon(null);
 
     // Refs to track state and prevent race conditions
     const lastLoadedUserRef = useRef(undefined);
@@ -150,7 +152,10 @@ export const CartProvider = ({ children }) => {
         cartError,
         clearCartError: () => setCartError(null),
         cartSuccess,
-        clearCartSuccess: () => setCartSuccess(null)
+        clearCartSuccess: () => setCartSuccess(null),
+        appliedCoupon,
+        applyCoupon,
+        removeCoupon
     };
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

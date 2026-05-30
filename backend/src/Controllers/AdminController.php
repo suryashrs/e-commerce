@@ -40,7 +40,7 @@ class AdminController {
             (SELECT COUNT(*) FROM products WHERE is_flagged = 1) as flagged_products,
             (SELECT COUNT(*) FROM users WHERE role = 'seller' AND shop_status = 'pending') as pending_shops,
             (SELECT COUNT(*) FROM users WHERE role = 'seller' AND shop_status = 'approved') as active_sellers,
-            (SELECT COUNT(*) FROM orders WHERE status = 'delivered') as completed_orders";
+            (SELECT COUNT(*) FROM orders WHERE status IN ('delivered', 'completed')) as completed_orders";
         $stmt_counts = $this->db->query($query_counts);
         $counts = $stmt_counts->fetch(PDO::FETCH_ASSOC);
 

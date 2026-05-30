@@ -81,38 +81,7 @@ const Cart = () => {
         }
     };
 
-    const handleEsewaCheckout = () => {
-        if (!user) {
-            setShowAuthModal(true);
-            return;
-        }
 
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `${API_BASE_URL}/checkout/esewa_init.php`;
-
-        const data = {
-            user_id: user.id,
-            total_amount: finalTotal,
-            items: cartItems.map(item => ({
-                product_id: item.id,
-                quantity: item.quantity,
-                price: item.price
-            }))
-        };
-
-        // Add fields to form
-        Object.keys(data).forEach(key => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = key;
-            input.value = typeof data[key] === 'object' ? JSON.stringify(data[key]) : data[key];
-            form.appendChild(input);
-        });
-
-        document.body.appendChild(form);
-        form.submit();
-    };
 
     if (cartItems.length === 0) {
         return (
@@ -297,24 +266,7 @@ const Cart = () => {
                         {(viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin')) ? "🚫 Checkout Disabled" : "Proceed to Checkout"}
                     </button>
                     
-                    <div className="relative my-4 flex items-center">
-                        <div className="flex-grow border-t border-gray-100"></div>
-                        <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold uppercase tracking-widest">OR</span>
-                        <div className="flex-grow border-t border-gray-100"></div>
-                    </div>
 
-                    <button
-                        onClick={handleEsewaCheckout}
-                        disabled={viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin')}
-                        className={`w-full py-3.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 hover:-translate-y-0.5 active:translate-y-0 ${
-                            (viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin'))
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-100'
-                            : 'bg-[#60bb46] hover:bg-[#52a63b] text-white'
-                        }`}
-                    >
-                        <img src="https://esewa.com.np/common/images/esewa_logo.png" alt="eSewa" className={`h-6 ${(viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin')) ? 'grayscale opacity-50' : 'brightness-0 invert'}`} />
-                        {(viewMode !== 'buyer' && (user?.role === 'seller' || user?.role === 'admin')) ? "🚫 Payment Disabled" : "Pay with eSewa"}
-                    </button>
                     <Link to="/shop" className="mt-4 text-gray-500 hover:text-black hover:underline block text-center text-sm font-medium">
                         &larr; Continue Shopping
                     </Link>

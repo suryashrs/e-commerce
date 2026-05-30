@@ -25,7 +25,8 @@ if (empty($data->user_id) || empty($data->total_amount) || empty($data->items)) 
     exit;
 }
 
-// 1. Create a pending order
+// 1. Create a pending order — tag it as esewa
+$data->payment_method = 'esewa';
 $orderResponse = $orderController->create($data);
 
 if ($orderResponse['status'] !== 201) {

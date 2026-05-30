@@ -9,6 +9,9 @@ class Order {
     public $total_amount;
     public $coupon_id;
     public $items;
+    public $shipping_address;
+    public $email;
+    public $payment_method;
 
     public function __construct($db){
         $this->conn = $db;
@@ -16,14 +19,24 @@ class Order {
 
     public function create(){
         try {
+            // Ensure columns exist (safe migration) - DDL causes implicit commit in MySQL, must be outside transaction
+            try {
+                $this->conn->exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_address TEXT NULL");
+                $this->conn->exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS email VARCHAR(255) NULL");
+                $this->conn->exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) NULL DEFAULT 'cod'");
+            } catch (Exception $e) { /* columns may already exist */ }
+
             $this->conn->beginTransaction();
 
-            $query = "INSERT INTO " . $this->table_name . " (user_id, coupon_id, total_amount, status, created_at) VALUES (:user_id, :coupon_id, :total_amount, 'pending', NOW())";
+            $query = "INSERT INTO " . $this->table_name . " (user_id, coupon_id, total_amount, shipping_address, email, payment_method, status, created_at) VALUES (:user_id, :coupon_id, :total_amount, :shipping_address, :email, :payment_method, 'pending', NOW())";
             $stmt = $this->conn->prepare($query);
 
             $stmt->bindParam(":user_id", $this->user_id);
             $stmt->bindParam(":coupon_id", $this->coupon_id);
             $stmt->bindParam(":total_amount", $this->total_amount);
+            $stmt->bindParam(":shipping_address", $this->shipping_address);
+            $stmt->bindParam(":email", $this->email);
+            $stmt->bindParam(":payment_method", $this->payment_method);
 
             if($stmt->execute()){
                 $order_id = $this->conn->lastInsertId();
